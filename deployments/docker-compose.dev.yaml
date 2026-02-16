@@ -1,0 +1,37 @@
+services:
+  postgres:
+    image: postgres:16.2-alpine
+    container_name: postgres
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: proteus-db
+    ports:
+      - 5433:5432
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d proteus-db"]
+      interval: 5s
+      timeout: 5s
+      retries: 30 # high value for VM compatibility
+    restart: on-failure
+
+  minio:
+      image: quay.io/minio/minio:latest
+      container_name: minio
+      ports:
+        - "9000:9000"    
+        - "9001:9001"    
+      environment:
+        MINIO_ROOT_USER:     minioadmin
+        MINIO_ROOT_PASSWORD: minioadmin123456  
+      volumes:
+        - minio-data:/data
+      command: server /data --console-address ":9001"
+      healthcheck:
+        test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+        interval: 30s
+        timeout: 20s
+        retries: 3
+
+volumes:
+  minio-data:

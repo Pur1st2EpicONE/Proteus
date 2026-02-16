@@ -1,0 +1,31 @@
+# Docker environment flag
+docker: true                                   # Indicates containerized run; getenv errors are suppressed (envs come from docker-compose)
+ 
+# Logger configuration
+logger:
+  log_directory: ./logs                        # Directory for logs, must be mounted via docker-compose volume; if empty, logs are written to stdout
+  debug_mode: true                             # Enable debug-level logging
+
+# HTTP server configuration
+server:
+  port: "8080"                                 # Port where the HTTP server listens; must match the exposed port in docker-compose.full.yaml
+  read_timeout: 5s                             # Maximum duration for reading the entire request
+  write_timeout: 10s                           # Maximum duration before timing out response writes
+  max_header_bytes: 1048576                    # Maximum size of request headers in bytes
+  shutdown_timeout: 10s                        # Timeout for graceful server shutdown
+
+# Database (PostgreSQL) configuration
+database:
+  goose_dialect: "postgres"                    # Dialect used by goose migrations
+  goose_migrations_directory: "./migrations"   # Directory containing migration files
+  host: postgres                               # Database host
+  port: "5432"                                 # Database port; must match the exposed port in docker-compose.full.yaml
+  dbname: proteus-db                            # Database name
+  sslmode: disable                             # SSL mode for database connection
+  max_open_conns: 20                           # Maximum number of open database connections
+  max_idle_conns: 10                           # Maximum number of idle connections
+  conn_max_lifetime: 30m                       # Maximum lifetime of a database connection
+  query_retry_strategy:
+    attempts: 3                                # Number of retry attempts for failed DB queries
+    delay: 200ms                               # Initial delay between retries
+    backoff: 2                                 # Backoff multiplier for retry delay
