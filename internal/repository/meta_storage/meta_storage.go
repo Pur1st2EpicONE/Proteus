@@ -3,13 +3,16 @@ package meta_storage
 import (
 	"Proteus/internal/config"
 	"Proteus/internal/logger"
+	"Proteus/internal/models"
 	"Proteus/internal/repository/meta_storage/postgres"
+	"context"
 	"fmt"
 
 	"github.com/wb-go/wbf/dbpg"
 )
 
 type MetaStorage interface {
+	SaveImageMeta(ctx context.Context, image *models.Image) error
 	Close()
 }
 

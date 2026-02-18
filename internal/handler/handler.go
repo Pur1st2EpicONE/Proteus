@@ -23,6 +23,8 @@ func NewHandler(service service.Service) http.Handler {
 	_ = apiV1
 	_ = handlerV1
 
+	apiV1.POST("/upload", handlerV1.UploadImage)
+
 	return handler
 
 }

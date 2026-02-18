@@ -1,16 +1,15 @@
 package minio
 
 import (
+	"bytes"
 	"context"
 	"fmt"
-	"mime/multipart"
-	"path/filepath"
 	"time"
 
 	"Proteus/internal/config"
 	"Proteus/internal/logger"
+	"Proteus/internal/models"
 
-	"github.com/google/uuid"
 	"github.com/minio/minio-go/v7"
 )
 
@@ -28,22 +27,18 @@ func (s *ImageStorage) Close() error {
 	return nil
 }
 
-func (s *ImageStorage) UploadMultipart(ctx context.Context, file multipart.File, header *multipart.FileHeader, prefix string) (string, error) {
+func (s *ImageStorage) UploadImage(ctx context.Context, image *models.Image) error {
 
-	objectName := fmt.Sprintf("%s%s%s", prefix, uuid.New().String(), filepath.Ext(header.Filename))
-	contentType := header.Header.Get("Content-Type")
-	if contentType == "" {
-		contentType = "application/octet-stream"
-	}
-
-	_, err := s.client.PutObject(ctx, s.bucketName, objectName, file, header.Size, minio.PutObjectOptions{ContentType: contentType})
+	_, err := s.client.PutObject(ctx, s.bucketName, image.ObjectKey, bytes.NewReader(image.File), image.Size,
+		minio.PutObjectOptions{ContentType: image.FileHeader.Header.Get("Content-Type")})
 	if err != nil {
-		return "", fmt.Errorf("minio PutObject failed: %w", err)
+		return fmt.Errorf("minio PutObject failed: %w", err)
 	}
 
-	s.logger.LogInfo("file uploaded to MinIO", "bucket", s.bucketName, "object", objectName, "size_bytes", header.Size)
+	s.logger.LogInfo("file uploaded to MinIO", "bucket", s.bucketName, "imageID", image.ID, "size_bytes", image.Size)
 
-	return objectName, nil
+	return nil
+
 }
 
 func (s *ImageStorage) GetPresignedURL(ctx context.Context, objectKey string, expiry time.Duration) (string, error) {

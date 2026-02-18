@@ -3,9 +3,9 @@ package image_storage
 import (
 	"Proteus/internal/config"
 	"Proteus/internal/logger"
+	"Proteus/internal/models"
 	"Proteus/internal/repository/image_storage/minio"
 	"context"
-	"mime/multipart"
 	"time"
 
 	m "github.com/minio/minio-go/v7"
@@ -14,7 +14,7 @@ import (
 
 type ImageStorage interface {
 	Close() error
-	UploadMultipart(ctx context.Context, file multipart.File, header *multipart.FileHeader, prefix string) (objectKey string, err error)
+	UploadImage(ctx context.Context, image *models.Image) error
 	GetPresignedURL(ctx context.Context, objectKey string, expirySeconds time.Duration) (url string, err error)
 	Delete(ctx context.Context, objectKey string) error
 }
