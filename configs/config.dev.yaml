@@ -33,3 +33,14 @@ repository:
     minio_bucket: images
     minio_use_ssl: false
     minio_region: us-east-1
+
+consumer:
+  brokers:
+    - localhost:9092                     # List of Kafka brokers for the consumer
+  topic: images                          # Topic to consume messages from
+  group_id: image-consumers              # Consumer group ID
+
+producer:
+  brokers:
+    - localhost:9092                     # List of Kafka brokers for the consumer
+  topic: images                          # Topic to consume messages from

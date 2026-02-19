@@ -4,22 +4,23 @@ import (
 	"Proteus/internal/errs"
 	"Proteus/internal/models"
 	"bytes"
+	"fmt"
 	"image"
+	_ "image/gif"
+	_ "image/jpeg"
+	_ "image/png"
+
+	_ "golang.org/x/image/webp"
 )
 
 func validateImage(img *models.Image) error {
 
 	reader := bytes.NewReader(img.File)
 
-	config, format, err := image.DecodeConfig(reader)
+	config, _, err := image.DecodeConfig(reader)
 	if err != nil {
+		fmt.Println(err)
 		return errs.ErrInvalidImageContent
-	}
-
-	allowedFormats := map[string]bool{"jpeg": true, "png": true, "webp": true, "gif": true}
-
-	if !allowedFormats[format] {
-		return errs.ErrUnsupportedImageFormat
 	}
 
 	if err := validateDimensions(config); err != nil {

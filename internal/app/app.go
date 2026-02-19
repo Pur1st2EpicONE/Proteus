@@ -1,6 +1,7 @@
 package app
 
 import (
+	"Proteus/internal/broker"
 	"Proteus/internal/config"
 	"Proteus/internal/handler"
 	"Proteus/internal/logger"
@@ -9,21 +10,24 @@ import (
 	"Proteus/internal/server"
 	"Proteus/internal/service"
 	"context"
-	"fmt"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/minio/minio-go/v7"
-	"github.com/pressly/goose/v3"
+	km "github.com/segmentio/kafka-go"
 	"github.com/wb-go/wbf/dbpg"
+	wbf "github.com/wb-go/wbf/kafka"
+	"github.com/wb-go/wbf/retry"
 )
 
 type App struct {
 	logger       logger.Logger
 	logFile      *os.File
 	server       server.Server
+	consumer     broker.Consumer
+	producer     broker.Producer
 	ctx          context.Context
 	cancel       context.CancelFunc
 	metaStorage  meta_storage.MetaStorage
@@ -41,85 +45,30 @@ func Boot() *App {
 
 	metaDb, imageDb, err := bootstrapRepository(logger, config.Repository)
 	if err != nil {
-		logger.LogFatal("app — failed to bootstrap repository layer", err, "layer", "app")
+		logger.LogFatal("app — failed to bootstrap repository", err, "layer", "app")
 	}
 
 	return wireApp(metaDb, imageDb, logger, logFile, config)
 
 }
 
-func bootstrapRepository(logger logger.Logger, config config.Repository) (*dbpg.DB, *minio.Client, error) {
-
-	metaDb, err := bootstrapMetaDB(logger, config.MetaStorage)
-	if err != nil {
-		return nil, nil, fmt.Errorf("fatal at metaDb: %w", err)
-	}
-
-	imageDb, err := bootstrapImageDB(logger, config.ImageStorage)
-	if err != nil {
-		return nil, nil, fmt.Errorf("fatal at imageDb: %w", err)
-
-	}
-	return metaDb, imageDb, nil
-
-}
-
-func bootstrapMetaDB(logger logger.Logger, config config.MetaStorage) (*dbpg.DB, error) {
-
-	metaDb, err := meta_storage.ConnectDB(config)
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to meta storage: %w", err)
-	}
-
-	logger.LogInfo("app — connected to meta database", "layer", "app")
-
-	if err := goose.SetDialect(config.Dialect); err != nil {
-		return nil, fmt.Errorf("failed to set goose dialect: %w", err)
-	}
-
-	if err := goose.Up(metaDb.Master, config.MigrationsDir); err != nil {
-		return nil, fmt.Errorf("failed to apply goose migrations: %w", err)
-	}
-
-	logger.Debug("app — migrations applied", "layer", "app")
-
-	return metaDb, nil
-
-}
-
-func bootstrapImageDB(logger logger.Logger, config config.ImageStorage) (*minio.Client, error) {
-
-	imageDb, err := image_storage.ConnectDB(config)
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to image storage: %w", err)
-	}
-
-	logger.LogInfo("app — connected to image database", "layer", "app")
-
-	err = imageDb.MakeBucket(context.Background(), config.MinIOBucket, minio.MakeBucketOptions{})
-	if err != nil {
-		return nil, fmt.Errorf("cannot create bucket %q: %w", config.MinIOBucket, err)
-	}
-
-	logger.LogInfo("MinIO bucket created", "bucket", config.MinIOBucket)
-
-	return imageDb, nil
-
-}
-
-func wireApp(metaDb *dbpg.DB, imageDb *minio.Client, logger logger.Logger, logFile *os.File, config config.Config) *App {
+func wireApp(metaDb *dbpg.DB, imageDb *minio.Client, logger logger.Logger, logFile *os.File, cfg config.Config) *App {
 
 	ctx, cancel := newContext(logger)
-	metaStorge := meta_storage.NewMetaStorage(logger, config.Repository.MetaStorage, metaDb)
-	imageStorage := image_storage.NewImageStorage(logger, config.Repository.ImageStorage, imageDb)
-	service := service.NewService(logger, metaStorge, imageStorage)
+	consumer := broker.NewConsumer(logger, cfg.Consumer, wbf.NewConsumer(cfg.Consumer.Brokers, cfg.Consumer.Topic, cfg.Consumer.GroupID))
+	producer := broker.NewProducer(logger, cfg.Producer, wbf.NewProducer(cfg.Consumer.Brokers, cfg.Consumer.Topic))
+	metaStorge := meta_storage.NewMetaStorage(logger, cfg.Repository.MetaStorage, metaDb)
+	imageStorage := image_storage.NewImageStorage(logger, cfg.Repository.ImageStorage, imageDb)
+	service := service.NewService(logger, producer, metaStorge, imageStorage)
 	handler := handler.NewHandler(service)
-	server := server.NewServer(logger, config.Server, handler)
+	server := server.NewServer(logger, cfg.Server, handler)
 
 	return &App{
 		logger:       logger,
 		logFile:      logFile,
 		server:       server,
+		consumer:     consumer,
+		producer:     producer,
 		ctx:          ctx,
 		cancel:       cancel,
 		metaStorage:  metaStorge,
@@ -151,6 +100,10 @@ func (a *App) Run() {
 			a.logger.LogFatal("server run failed", err, "layer", "app")
 		}
 	}()
+
+	c := make(chan km.Message)
+
+	go a.consumer.Run(a.ctx, c, retry.Strategy{Attempts: 3, Delay: 5, Backoff: 2})
 
 	<-a.ctx.Done()
 

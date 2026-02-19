@@ -21,6 +21,7 @@ up:
 down:
 	docker compose down 2>/dev/null || true 
 	rm -f Dockerfile docker-compose.yaml config.yaml
+	@docker volume rm proteus_minio-data
 
 reset:
 	docker volume rm proteus_minio-data
@@ -31,6 +32,8 @@ local:
 	if [ ! -f docker-compose.yaml ]; then cp ./deployments/docker-compose.dev.yaml ./docker-compose.yaml; fi
 	docker compose up -d
 	until docker exec postgres pg_isready -U ${DB_USER} > /dev/null 2>&1; do sleep 0.5; done
+	docker exec kafka /opt/kafka/bin/kafka-topics.sh --create --topic images --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
+	@echo "Topic created"
 	bash -c 'trap "exit 0" INT; go run ./cmd/proteus/main.go'
 
 test:

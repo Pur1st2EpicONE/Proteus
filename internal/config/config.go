@@ -11,6 +11,8 @@ import (
 type Config struct {
 	Logger     Logger     `mapstructure:"logger"`
 	Server     Server     `mapstructure:"server"`
+	Consumer   Consumer   `mapstructure:"consumer"`
+	Producer   Producer   `mapstructure:"producer"`
 	Repository Repository `mapstructure:"repository"`
 }
 
@@ -25,6 +27,15 @@ type Server struct {
 	WriteTimeout    time.Duration `mapstructure:"write_timeout"`
 	MaxHeaderBytes  int           `mapstructure:"max_header_bytes"`
 	ShutdownTimeout time.Duration `mapstructure:"shutdown_timeout"`
+}
+
+type Consumer struct {
+	Brokers []string `mapstructure:"brokers"`
+	Topic   string   `mapstructure:"topic"`
+	GroupID string   `mapstructure:"group_id"`
+}
+
+type Producer struct {
 }
 
 type Repository struct {

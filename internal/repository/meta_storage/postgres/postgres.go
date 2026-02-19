@@ -19,7 +19,7 @@ type MetaStorage struct {
 }
 
 func NewMetaStorage(logger logger.Logger, config config.MetaStorage, db *dbpg.DB) *MetaStorage {
-	return &MetaStorage{db: db, logger: logger, config: config}
+	return &MetaStorage{logger: logger, config: config, db: db}
 }
 
 func (s *MetaStorage) SaveImageMeta(ctx context.Context, image *models.Image) error {
