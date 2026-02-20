@@ -29,36 +29,32 @@ func NewService(logger logger.Logger, producer broker.Producer, metaStorage meta
 
 func (s *Service) UploadImage(ctx context.Context, image *models.Image) (string, error) {
 
-	if err := validateImage(image); err != nil {
+	if err := validate(image); err != nil {
 		return "", err
 	}
 
 	initialize(image)
-
 	var g errgroup.Group
 
-	g.Go(func() error {
-		return s.metaStorage.SaveImageMeta(ctx, image)
-	})
-
-	g.Go(func() error {
-		return s.imageStorage.UploadImage(ctx, image)
-	})
+	g.Go(func() error { return s.metaStorage.SaveImageMeta(ctx, image) })
+	g.Go(func() error { return s.imageStorage.UploadImage(ctx, image) })
 
 	if err := g.Wait(); err != nil {
 		return "", err
 	}
 
-	task := models.ImageProcessTask{
+	payload, err := json.Marshal(models.ImageProcessTask{
 		ID:           image.ID,
 		ObjectKey:    image.ObjectKey,
 		OriginalName: image.FileHeader.Filename,
 		MimeType:     image.FileHeader.Header.Get("Content-Type"),
 		FileSize:     image.Size,
-		Requested:    []string{"thumbnail", "medium", "watermarked"},
-	}
-
-	payload, err := json.Marshal(task)
+		Action:       image.Request.Action,
+		Watermark:    image.Request.Watermark,
+		Height:       image.Request.Height,
+		Width:        image.Request.Width,
+		Quality:      image.Request.Quality,
+	})
 	if err != nil {
 		return "", err
 	}

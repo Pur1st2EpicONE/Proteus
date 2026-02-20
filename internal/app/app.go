@@ -16,7 +16,6 @@ import (
 	"syscall"
 
 	"github.com/minio/minio-go/v7"
-	km "github.com/segmentio/kafka-go"
 	"github.com/wb-go/wbf/dbpg"
 	wbf "github.com/wb-go/wbf/kafka"
 	"github.com/wb-go/wbf/retry"
@@ -55,11 +54,11 @@ func Boot() *App {
 func wireApp(metaDb *dbpg.DB, imageDb *minio.Client, logger logger.Logger, logFile *os.File, cfg config.Config) *App {
 
 	ctx, cancel := newContext(logger)
-	consumer := broker.NewConsumer(logger, cfg.Consumer, wbf.NewConsumer(cfg.Consumer.Brokers, cfg.Consumer.Topic, cfg.Consumer.GroupID))
+	mStorage := meta_storage.NewMetaStorage(logger, cfg.Repository.MetaStorage, metaDb)
+	iStorage := image_storage.NewImageStorage(logger, cfg.Repository.ImageStorage, imageDb)
+	consumer := broker.NewConsumer(logger, cfg.Consumer, wbf.NewConsumer(cfg.Consumer.Brokers, cfg.Consumer.Topic, cfg.Consumer.GroupID), iStorage)
 	producer := broker.NewProducer(logger, cfg.Producer, wbf.NewProducer(cfg.Consumer.Brokers, cfg.Consumer.Topic))
-	metaStorge := meta_storage.NewMetaStorage(logger, cfg.Repository.MetaStorage, metaDb)
-	imageStorage := image_storage.NewImageStorage(logger, cfg.Repository.ImageStorage, imageDb)
-	service := service.NewService(logger, producer, metaStorge, imageStorage)
+	service := service.NewService(logger, producer, mStorage, iStorage)
 	handler := handler.NewHandler(service)
 	server := server.NewServer(logger, cfg.Server, handler)
 
@@ -71,8 +70,8 @@ func wireApp(metaDb *dbpg.DB, imageDb *minio.Client, logger logger.Logger, logFi
 		producer:     producer,
 		ctx:          ctx,
 		cancel:       cancel,
-		metaStorage:  metaStorge,
-		imageStorage: imageStorage,
+		metaStorage:  mStorage,
+		imageStorage: iStorage,
 	}
 
 }
@@ -101,9 +100,7 @@ func (a *App) Run() {
 		}
 	}()
 
-	c := make(chan km.Message)
-
-	go a.consumer.Run(a.ctx, c, retry.Strategy{Attempts: 3, Delay: 5, Backoff: 2})
+	go a.consumer.Run(a.ctx, retry.Strategy{Attempts: 3, Delay: 5, Backoff: 2})
 
 	<-a.ctx.Done()
 

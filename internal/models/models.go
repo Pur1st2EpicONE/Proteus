@@ -1,9 +1,17 @@
 package models
 
-import "mime/multipart"
+import (
+	"mime/multipart"
+)
 
 const (
 	StatusPending = "pending" // pending
+)
+
+const (
+	Resize    = "resize"
+	Thumbnail = "thumbnail"
+	Watermark = "watermark"
 )
 
 type Image struct {
@@ -13,6 +21,15 @@ type Image struct {
 	File       []byte
 	FileHeader *multipart.FileHeader
 	Prefix     string
+	Request    Request
+}
+
+type Request struct {
+	Action    []string
+	Watermark string
+	Height    int
+	Width     int
+	Quality   int
 }
 
 type ImageProcessTask struct {
@@ -21,5 +38,9 @@ type ImageProcessTask struct {
 	OriginalName string   `json:"original_name"`
 	MimeType     string   `json:"mime_type"`
 	FileSize     int64    `json:"file_size"`
-	Requested    []string `json:"requested"`
+	Action       []string `json:"action"`
+	Watermark    string   `json:"watermark"`
+	Height       int      `json:"height"`
+	Width        int      `json:"width "`
+	Quality      int      `json:"quality"`
 }

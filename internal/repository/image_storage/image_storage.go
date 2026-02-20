@@ -15,6 +15,8 @@ import (
 type ImageStorage interface {
 	Close() error
 	UploadImage(ctx context.Context, image *models.Image) error
+	DownloadImage(ctx context.Context, objectKey string) ([]byte, error)
+	UploadProcessed(ctx context.Context, objectKey string, file []byte, contentType string) error
 	GetPresignedURL(ctx context.Context, objectKey string, expirySeconds time.Duration) (url string, err error)
 	Delete(ctx context.Context, objectKey string) error
 }
@@ -25,8 +27,7 @@ func NewImageStorage(logger logger.Logger, config config.ImageStorage, imageDb *
 
 func ConnectDB(config config.ImageStorage) (*m.Client, error) {
 
-	return m.New(
-		config.MinIOEndpoint,
+	return m.New(config.MinIOEndpoint,
 		&m.Options{Creds: credentials.NewStaticV4(
 			config.MinIOAccessKey,
 			config.MinIOSecretKey, ""),
