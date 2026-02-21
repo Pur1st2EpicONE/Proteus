@@ -5,6 +5,7 @@ import (
 	"Proteus/internal/config"
 	"Proteus/internal/handler"
 	"Proteus/internal/logger"
+	"Proteus/internal/models"
 	"Proteus/internal/repository/image_storage"
 	"Proteus/internal/repository/meta_storage"
 	"Proteus/internal/server"
@@ -51,16 +52,23 @@ func Boot() *App {
 
 }
 
-func wireApp(metaDb *dbpg.DB, imageDb *minio.Client, logger logger.Logger, logFile *os.File, cfg config.Config) *App {
+func wireApp(metaDb *dbpg.DB, imageDb *minio.Client, logger logger.Logger, logFile *os.File, config config.Config) *App {
 
 	ctx, cancel := newContext(logger)
-	mStorage := meta_storage.NewMetaStorage(logger, cfg.Repository.MetaStorage, metaDb)
-	iStorage := image_storage.NewImageStorage(logger, cfg.Repository.ImageStorage, imageDb)
-	consumer := broker.NewConsumer(logger, cfg.Consumer, wbf.NewConsumer(cfg.Consumer.Brokers, cfg.Consumer.Topic, cfg.Consumer.GroupID), iStorage)
-	producer := broker.NewProducer(logger, cfg.Producer, wbf.NewProducer(cfg.Consumer.Brokers, cfg.Consumer.Topic))
+
+	mStorage := meta_storage.NewMetaStorage(logger, config.Repository.MetaStorage, metaDb)
+	iStorage := image_storage.NewImageStorage(logger, config.Repository.ImageStorage, imageDb)
+
+	wbfProducer := wbf.NewProducer(config.Consumer.Brokers, config.Consumer.Topic)
+	producer := broker.NewProducer(logger, config.Producer, wbfProducer)
+
 	service := service.NewService(logger, producer, mStorage, iStorage)
+
+	wbfConsumer := wbf.NewConsumer(config.Consumer.Brokers, config.Consumer.Topic, config.Consumer.GroupID)
+	consumer := broker.NewConsumer(logger, config.Consumer, wbfConsumer, processFunc(service), iStorage)
+
 	handler := handler.NewHandler(service)
-	server := server.NewServer(logger, cfg.Server, handler)
+	server := server.NewServer(logger, config.Server, handler)
 
 	return &App{
 		logger:       logger,
@@ -74,6 +82,12 @@ func wireApp(metaDb *dbpg.DB, imageDb *minio.Client, logger logger.Logger, logFi
 		imageStorage: iStorage,
 	}
 
+}
+
+func processFunc(service service.Service) func(ctx context.Context, image models.ImageProcessTask) error {
+	return func(ctx context.Context, image models.ImageProcessTask) error {
+		return service.ProcessImage(ctx, image)
+	}
 }
 
 func newContext(logger logger.Logger) (context.Context, context.CancelFunc) {

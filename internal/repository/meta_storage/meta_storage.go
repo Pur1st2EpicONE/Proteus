@@ -13,6 +13,8 @@ import (
 
 type MetaStorage interface {
 	SaveImageMeta(ctx context.Context, image *models.Image) error
+	GetImageMeta(ctx context.Context, id string) (string, string, error)
+	MarkAsReady(ctx context.Context, uuid string, processedKey string) error
 	Close()
 }
 

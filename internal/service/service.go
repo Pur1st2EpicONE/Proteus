@@ -12,6 +12,9 @@ import (
 
 type Service interface {
 	UploadImage(ctx context.Context, image *models.Image) (string, error)
+	ProcessImage(ctx context.Context, task models.ImageProcessTask) error
+	GetImageMeta(ctx context.Context, id string) (string, string, error)
+	DownloadImage(ctx context.Context, key string) ([]byte, string, error)
 }
 
 func NewService(logger logger.Logger, producer broker.Producer, metaStorage meta_storage.MetaStorage, imageStorage image_storage.ImageStorage) Service {
