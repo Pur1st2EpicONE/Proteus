@@ -61,6 +61,9 @@ func mapErrorToStatus(err error) (int, string) {
 	case rbTooLarge(err):
 		return http.StatusRequestEntityTooLarge, errs.ErrRequestBodyTooLarge.Error()
 
+	case errors.Is(err, errs.ErrImageNotFound):
+		return http.StatusNotFound, err.Error()
+
 	default:
 		return http.StatusInternalServerError, errs.ErrInternal.Error()
 	}

@@ -4,6 +4,7 @@ import (
 	"Proteus/internal/broker/kafka"
 	"Proteus/internal/config"
 	"Proteus/internal/logger"
+	"Proteus/internal/models"
 	"Proteus/internal/repository/image_storage"
 	"context"
 
@@ -11,10 +12,12 @@ import (
 	"github.com/wb-go/wbf/retry"
 )
 
+type processFunc func(ctx context.Context, task models.ImageProcessTask) error
+
 type Consumer interface {
 	Run(ctx context.Context, strategy retry.Strategy)
 }
 
-func NewConsumer(logger logger.Logger, config config.Consumer, consumer *wbf.Consumer, imageStorage image_storage.ImageStorage) Consumer {
-	return kafka.NewConsumer(logger, config, consumer, imageStorage)
+func NewConsumer(l logger.Logger, cfg config.Consumer, cons *wbf.Consumer, processFunc processFunc, iStorage image_storage.ImageStorage) Consumer {
+	return kafka.NewConsumer(l, cfg, cons, processFunc, iStorage)
 }

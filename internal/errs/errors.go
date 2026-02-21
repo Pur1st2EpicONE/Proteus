@@ -20,4 +20,5 @@ var (
 	ErrResizeDimensionsRequired = errors.New("resize requires width or height greater than zero")             // resize requires width or height greater than zero
 	ErrNegativeResizeDimensions = errors.New("width and height must be positive values")                      // width and height must be positive values
 	ErrInvalidQualityRange      = errors.New("quality must be between 1 and 100")                             // quality must be between 1 and 100
+	ErrImageNotFound            = errors.New("image not found")                                               // image not found
 )

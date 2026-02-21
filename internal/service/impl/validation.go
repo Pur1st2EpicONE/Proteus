@@ -28,22 +28,17 @@ func validateRequest(request models.Request) error {
 		return errs.ErrNoActionsProvided
 	}
 
-	actionSet := make(map[string]struct{})
-
-	for _, action := range request.Action {
-		if _, ok := allowed[action]; !ok {
-			return errs.ErrUnsupportedAction
-		}
-		actionSet[action] = struct{}{}
+	if _, ok := allowed[request.Action]; !ok {
+		return errs.ErrUnsupportedAction
 	}
 
-	if _, ok := actionSet[models.Watermark]; ok {
+	if request.Action == models.Watermark {
 		if strings.TrimSpace(request.Watermark) == "" {
 			return errs.ErrWatermarkTextRequired
 		}
 	}
 
-	if _, ok := actionSet[models.Resize]; ok {
+	if request.Action == models.Resize {
 		if request.Width <= 0 && request.Height <= 0 {
 			return errs.ErrResizeDimensionsRequired
 		}
