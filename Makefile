@@ -32,12 +32,11 @@ local:
 	if [ ! -f docker-compose.yaml ]; then cp ./deployments/docker-compose.dev.yaml ./docker-compose.yaml; fi
 	docker compose up -d
 	until docker exec postgres pg_isready -U ${DB_USER} > /dev/null 2>&1; do sleep 0.5; done
-	docker exec kafka /opt/kafka/bin/kafka-topics.sh --create --topic images --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
-	@echo "Topic created"
+	docker exec kafka /opt/kafka/bin/kafka-topics.sh --create --if-not-exists --topic images --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
 	bash -c 'trap "exit 0" INT; go run ./cmd/proteus/main.go'
 
 test:
-	if [ ! -f .env ]; then cat .env.example > .env; fi 
+	if [ ! -f .env ]; then cat .env.example > .env	; fi 
 	if [ ! -f config.yaml ]; then cp ./configs/config.test.yaml ./config.yaml; fi 
 	if [ ! -f docker-compose.yaml ]; then cp ./deployments/docker-compose.test.yaml ./docker-compose.yaml; fi
 	docker compose -f docker-compose.yaml up -d postgres-test

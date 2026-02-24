@@ -7,11 +7,14 @@ import (
 	"Proteus/internal/repository/meta_storage"
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/minio/minio-go/v7"
 	"github.com/pressly/goose/v3"
 	"github.com/wb-go/wbf/dbpg"
 )
+
+const startupTimeout = 10 * time.Second
 
 func bootstrapRepository(logger logger.Logger, config config.Repository) (*dbpg.DB, *minio.Client, error) {
 
@@ -61,13 +64,34 @@ func bootstrapImageDB(logger logger.Logger, config config.ImageStorage) (*minio.
 
 	logger.LogInfo("app — connected to image database", "layer", "app")
 
-	err = imageDb.MakeBucket(context.Background(), config.MinIOBucket, minio.MakeBucketOptions{})
-	if err != nil {
-		return nil, fmt.Errorf("cannot create bucket %q: %w", config.MinIOBucket, err)
+	ctx, cancel := context.WithTimeout(context.Background(), startupTimeout)
+	defer cancel()
+
+	if err := initBucket(ctx, imageDb, config.MinIOBucket, logger); err != nil {
+		return nil, fmt.Errorf("unable to init MinIO bucket: %w", err)
 	}
 
-	logger.LogInfo("MinIO bucket created", "bucket", config.MinIOBucket)
-
 	return imageDb, nil
+
+}
+
+func initBucket(ctx context.Context, client *minio.Client, bucketName string, logger logger.Logger) error {
+
+	exists, err := client.BucketExists(ctx, bucketName)
+	if err != nil {
+		return fmt.Errorf("failed check bucket existence: %w", err)
+	}
+
+	if exists {
+		return nil
+	}
+
+	if err := client.MakeBucket(ctx, bucketName, minio.MakeBucketOptions{}); err != nil {
+		return fmt.Errorf("failed to create bucket %q: %w", bucketName, err)
+	}
+
+	logger.LogInfo("app — MinIO bucket created", "bucket", bucketName, "layer", "app")
+
+	return nil
 
 }

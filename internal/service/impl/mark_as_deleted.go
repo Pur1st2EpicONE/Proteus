@@ -7,8 +7,8 @@ import (
 	"errors"
 )
 
-func (s *Service) DeleteImage(ctx context.Context, id string) error {
-	if err := s.metaStorage.DeleteImage(ctx, id); err != nil {
+func (s *Service) MarkAsDeleted(ctx context.Context, id string) error {
+	if err := s.metaStorage.MarkAsDeleted(ctx, id); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return errs.ErrImageNotFound
 		}

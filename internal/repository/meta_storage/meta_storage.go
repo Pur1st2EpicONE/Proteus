@@ -14,8 +14,10 @@ import (
 type MetaStorage interface {
 	SaveImageMeta(ctx context.Context, image *models.Image) error
 	GetImageMeta(ctx context.Context, id string) (string, string, error)
-	MarkAsReady(ctx context.Context, uuid string, processedKey string) error
-	DeleteImage(ctx context.Context, id string) error
+	MarkAsReady(ctx context.Context, objectKey string, uuid string) error
+	MarkAsDeleted(ctx context.Context, id string) error
+	GetDeleted(ctx context.Context) ([]models.Image, error)
+	DeleteBatch(ctx context.Context, ids []string) error
 	Close()
 }
 

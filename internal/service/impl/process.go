@@ -54,11 +54,9 @@ func (s *Service) ProcessImage(ctx context.Context, task models.ImageProcessTask
 		return err
 	}
 
-	if err := s.metaStorage.MarkAsReady(ctx, task.ID, task.ObjectKey[2:]); err != nil {
+	if err := s.metaStorage.MarkAsReady(ctx, task.ObjectKey[2:], task.ID); err != nil {
 		return fmt.Errorf("failed to mark image as ready: %w", err)
 	}
-
-	fmt.Println("processing completed:", task.ID)
 
 	return nil
 

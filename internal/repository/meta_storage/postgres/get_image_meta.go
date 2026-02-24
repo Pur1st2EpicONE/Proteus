@@ -1,7 +1,6 @@
 package postgres
 
 import (
-	"Proteus/internal/models"
 	"context"
 	"fmt"
 )
@@ -10,11 +9,11 @@ func (s *MetaStorage) GetImageMeta(ctx context.Context, id string) (key string, 
 
 	err = s.db.QueryRowContext(ctx, `
         
-	SELECT COALESCE(processed_key, ''), status
+	SELECT COALESCE(object_key, ''), status
     FROM images
-    WHERE uuid = $1 AND status = $2 OR status = $3`,
+    WHERE uuid = $1`,
 
-		id, models.StatusPending, models.StatusReady).Scan(&key, &status)
+		id).Scan(&key, &status)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to fetch image meta: %w", err)
 	}

@@ -19,6 +19,7 @@ type ImageStorage interface {
 	UploadProcessed(ctx context.Context, objectKey string, file []byte, contentType string) error
 	GetPresignedURL(ctx context.Context, objectKey string, expirySeconds time.Duration) (url string, err error)
 	Delete(ctx context.Context, objectKey string) error
+	DeleteBatch(ctx context.Context, objectKeys []string) error
 }
 
 func NewImageStorage(logger logger.Logger, config config.ImageStorage, imageDb *m.Client) ImageStorage {

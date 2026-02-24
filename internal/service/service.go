@@ -15,7 +15,8 @@ type Service interface {
 	ProcessImage(ctx context.Context, task models.ImageProcessTask) error
 	GetImageMeta(ctx context.Context, id string) (string, string, error)
 	DownloadImage(ctx context.Context, key string) ([]byte, string, error)
-	DeleteImage(ctx context.Context, id string) error
+	MarkAsDeleted(ctx context.Context, id string) error
+	Cleanup(ctx context.Context) error
 }
 
 func NewService(logger logger.Logger, producer broker.Producer, metaStorage meta_storage.MetaStorage, imageStorage image_storage.ImageStorage) Service {

@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/minio/minio-go/v7"
 	"github.com/wb-go/wbf/dbpg"
@@ -30,6 +31,7 @@ type App struct {
 	producer     broker.Producer
 	ctx          context.Context
 	cancel       context.CancelFunc
+	service      service.Service
 	metaStorage  meta_storage.MetaStorage
 	imageStorage image_storage.ImageStorage
 }
@@ -78,6 +80,7 @@ func wireApp(metaDb *dbpg.DB, imageDb *minio.Client, logger logger.Logger, logFi
 		producer:     producer,
 		ctx:          ctx,
 		cancel:       cancel,
+		service:      service,
 		metaStorage:  mStorage,
 		imageStorage: iStorage,
 	}
@@ -115,11 +118,30 @@ func (a *App) Run() {
 	}()
 
 	go a.consumer.Run(a.ctx, retry.Strategy{Attempts: 3, Delay: 5, Backoff: 2})
+	go a.runCleaner()
 
 	<-a.ctx.Done()
 
 	a.Stop()
 
+}
+
+func (a *App) runCleaner() {
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-a.ctx.Done():
+			a.logger.LogInfo("cleaner stopping", "layer", "app")
+			return
+		case <-ticker.C:
+			a.logger.Debug("starting cleanup", "layer", "app")
+			if err := a.service.Cleanup(a.ctx); err != nil {
+				a.logger.LogError("cleanup failed", err, "layer", "app")
+			}
+		}
+	}
 }
 
 func (a *App) Stop() {

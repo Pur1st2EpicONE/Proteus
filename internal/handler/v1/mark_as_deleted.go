@@ -7,7 +7,7 @@ import (
 	"github.com/wb-go/wbf/ginext"
 )
 
-func (h *Handler) DeleteImage(c *ginext.Context) {
+func (h *Handler) MarkAsDeleted(c *ginext.Context) {
 
 	id := c.Param("id")
 	if id == "" {
@@ -15,7 +15,7 @@ func (h *Handler) DeleteImage(c *ginext.Context) {
 		return
 	}
 
-	err := h.service.DeleteImage(c.Request.Context(), id)
+	err := h.service.MarkAsDeleted(c.Request.Context(), id)
 	if err != nil {
 		respondError(c, err)
 		return

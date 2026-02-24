@@ -10,7 +10,7 @@ import (
 	"github.com/wb-go/wbf/retry"
 )
 
-func (s *MetaStorage) DeleteImage(ctx context.Context, id string) error {
+func (s *MetaStorage) MarkAsDeleted(ctx context.Context, id string) error {
 
 	tx, err := s.db.BeginTxWithRetry(ctx, retry.Strategy{
 		Attempts: s.config.QueryRetryStrategy.Attempts,
@@ -27,7 +27,7 @@ func (s *MetaStorage) DeleteImage(ctx context.Context, id string) error {
         
 	SELECT uuid, status 
     FROM images 
-    WHERE uuid = $1 AND status = $2 OR status = $3
+    WHERE uuid = $1 AND (status = $2 OR status = $3)
     FOR UPDATE`,
 
 		id, models.StatusPending, models.StatusReady).Scan(&existingImage.ID, &existingImage.Status)

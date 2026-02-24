@@ -25,7 +25,7 @@ func NewHandler(service service.Service) http.Handler {
 
 	apiV1.POST("/upload", handlerV1.UploadImage)
 	apiV1.GET("/image/:id", handlerV1.GetImage)
-	apiV1.DELETE("/image/:id", handlerV1.DeleteImage)
+	apiV1.DELETE("/image/:id", handlerV1.MarkAsDeleted)
 
 	return handler
 

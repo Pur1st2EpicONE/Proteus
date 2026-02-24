@@ -5,15 +5,15 @@ import (
 	"fmt"
 )
 
-func (s *MetaStorage) MarkAsReady(ctx context.Context, uuid string, processedKey string) error {
+func (s *MetaStorage) MarkAsReady(ctx context.Context, objectKey string, uuid string) error {
 
 	result, err := s.db.ExecContext(ctx, `
 
     UPDATE images
-    SET processed_key = $1, status = 'ready', updated_at = NOW() 
+    SET object_key = $1, status = 'ready', updated_at = NOW() 
     WHERE uuid = $2`,
 
-		processedKey, uuid)
+		objectKey, uuid)
 	if err != nil {
 		return fmt.Errorf("failed to update image meta to ready: %w", err)
 	}
