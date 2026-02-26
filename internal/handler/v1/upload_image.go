@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"Proteus/internal/errs"
 	"Proteus/internal/models"
 	"io"
 	"net/http"
@@ -8,12 +9,9 @@ import (
 	"github.com/wb-go/wbf/ginext"
 )
 
-const maxFileSize = 10 << 20 // 10 MB
-const maxRequestSize = maxFileSize + (2 << 20)
-
 func (h *Handler) UploadImage(c *ginext.Context) {
 
-	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxRequestSize)
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, h.config.MaxRequestSize)
 
 	var request UploadImageDTO
 	if err := c.ShouldBind(&request); err != nil {
@@ -28,14 +26,19 @@ func (h *Handler) UploadImage(c *ginext.Context) {
 	}
 	defer multipartFile.Close()
 
-	if err := validateHeader(header); err != nil {
+	if err := h.validateHeader(header); err != nil {
 		respondError(c, err)
 		return
 	}
 
-	file, err := io.ReadAll(io.LimitReader(multipartFile, maxFileSize+1))
+	file, err := io.ReadAll(io.LimitReader(multipartFile, h.config.MaxFileSize+1))
 	if err != nil {
 		respondError(c, err)
+		return
+	}
+
+	if int64(len(file)) > h.config.MaxFileSize {
+		respondError(c, errs.ErrFileTooLarge)
 		return
 	}
 
@@ -53,6 +56,6 @@ func (h *Handler) UploadImage(c *ginext.Context) {
 		return
 	}
 
-	respondOK(c, ginext.H{"image_id": imageID})
+	respondOK(c, imageID)
 
 }

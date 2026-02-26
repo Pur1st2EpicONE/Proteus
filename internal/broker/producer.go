@@ -2,7 +2,6 @@ package broker
 
 import (
 	"Proteus/internal/broker/kafka"
-	"Proteus/internal/config"
 	"Proteus/internal/logger"
 	"context"
 
@@ -11,8 +10,9 @@ import (
 
 type Producer interface {
 	Send(ctx context.Context, key []byte, value []byte) error
+	Close()
 }
 
-func NewProducer(logger logger.Logger, config config.Producer, producer *wbf.Producer) Producer {
-	return kafka.NewProducer(logger, config, producer)
+func NewProducer(logger logger.Logger, producer *wbf.Producer) Producer {
+	return kafka.NewProducer(logger, producer)
 }

@@ -15,12 +15,10 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/minio/minio-go/v7"
 	"github.com/wb-go/wbf/dbpg"
 	wbf "github.com/wb-go/wbf/kafka"
-	"github.com/wb-go/wbf/retry"
 )
 
 type App struct {
@@ -30,7 +28,6 @@ type App struct {
 	consumer     broker.Consumer
 	producer     broker.Producer
 	ctx          context.Context
-	cancel       context.CancelFunc
 	service      service.Service
 	metaStorage  meta_storage.MetaStorage
 	imageStorage image_storage.ImageStorage
@@ -62,15 +59,13 @@ func wireApp(metaDb *dbpg.DB, imageDb *minio.Client, logger logger.Logger, logFi
 	iStorage := image_storage.NewImageStorage(logger, config.Repository.ImageStorage, imageDb)
 
 	wbfProducer := wbf.NewProducer(config.Consumer.Brokers, config.Consumer.Topic)
-	producer := broker.NewProducer(logger, config.Producer, wbfProducer)
+	producer := broker.NewProducer(logger, wbfProducer)
 
-	service := service.NewService(logger, producer, mStorage, iStorage)
+	service := service.NewService(logger, config.Service, producer, mStorage, iStorage)
+	server := server.NewServer(logger, config.Server, handler.NewHandler(config.Server, service), cancel)
 
 	wbfConsumer := wbf.NewConsumer(config.Consumer.Brokers, config.Consumer.Topic, config.Consumer.GroupID)
-	consumer := broker.NewConsumer(logger, config.Consumer, wbfConsumer, processFunc(service), iStorage)
-
-	handler := handler.NewHandler(service)
-	server := server.NewServer(logger, config.Server, handler)
+	consumer := broker.NewConsumer(ctx, logger, config.Consumer, wbfConsumer, processFunc(service), iStorage)
 
 	return &App{
 		logger:       logger,
@@ -79,18 +74,11 @@ func wireApp(metaDb *dbpg.DB, imageDb *minio.Client, logger logger.Logger, logFi
 		consumer:     consumer,
 		producer:     producer,
 		ctx:          ctx,
-		cancel:       cancel,
 		service:      service,
 		metaStorage:  mStorage,
 		imageStorage: iStorage,
 	}
 
-}
-
-func processFunc(service service.Service) func(ctx context.Context, image models.ImageProcessTask) error {
-	return func(ctx context.Context, image models.ImageProcessTask) error {
-		return service.ProcessImage(ctx, image)
-	}
 }
 
 func newContext(logger logger.Logger) (context.Context, context.CancelFunc) {
@@ -109,16 +97,17 @@ func newContext(logger logger.Logger) (context.Context, context.CancelFunc) {
 
 }
 
+func processFunc(service service.Service) func(ctx context.Context, image models.ImageProcessTask) error {
+	return func(ctx context.Context, image models.ImageProcessTask) error {
+		return service.ProcessImage(ctx, image)
+	}
+}
+
 func (a *App) Run() {
 
-	go func() {
-		if err := a.server.Run(); err != nil {
-			a.logger.LogFatal("server run failed", err, "layer", "app")
-		}
-	}()
-
-	go a.consumer.Run(a.ctx, retry.Strategy{Attempts: 3, Delay: 5, Backoff: 2})
-	go a.runCleaner()
+	go a.server.Run()
+	go a.consumer.Run()
+	go a.service.Cleaner(a.ctx)
 
 	<-a.ctx.Done()
 
@@ -126,28 +115,17 @@ func (a *App) Run() {
 
 }
 
-func (a *App) runCleaner() {
-	ticker := time.NewTicker(30 * time.Second)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-a.ctx.Done():
-			a.logger.LogInfo("cleaner stopping", "layer", "app")
-			return
-		case <-ticker.C:
-			a.logger.Debug("starting cleanup", "layer", "app")
-			if err := a.service.Cleanup(a.ctx); err != nil {
-				a.logger.LogError("cleanup failed", err, "layer", "app")
-			}
-		}
-	}
-}
-
 func (a *App) Stop() {
 
 	a.server.Shutdown()
+
+	a.consumer.Close()
+	a.producer.Close()
+
 	a.metaStorage.Close()
+	a.imageStorage.Close()
+
+	a.logger.LogInfo("app — stopped", "layer", "app")
 
 	if a.logFile != nil && a.logFile != os.Stdout {
 		_ = a.logFile.Close()

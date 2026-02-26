@@ -4,14 +4,15 @@ import (
 	"Proteus/internal/config"
 	"Proteus/internal/logger"
 	"Proteus/internal/server/httpserver"
+	"context"
 	"net/http"
 )
 
 type Server interface {
-	Run() error
+	Run()
 	Shutdown()
 }
 
-func NewServer(logger logger.Logger, config config.Server, handler http.Handler) Server {
-	return httpserver.NewServer(logger, config, handler)
+func NewServer(logger logger.Logger, config config.Server, handler http.Handler, cancel context.CancelFunc) Server {
+	return httpserver.NewServer(logger, config, handler, cancel)
 }

@@ -8,11 +8,13 @@ import (
 )
 
 func (s *ImageStorage) DeleteBatch(ctx context.Context, objectKeys []string) error {
+
 	if len(objectKeys) == 0 {
 		return nil
 	}
 
 	objectsCh := make(chan minio.ObjectInfo, len(objectKeys)*2)
+
 	for _, key := range objectKeys {
 		objectsCh <- minio.ObjectInfo{Key: key}
 		objectsCh <- minio.ObjectInfo{Key: "un" + key}
@@ -25,13 +27,16 @@ func (s *ImageStorage) DeleteBatch(ctx context.Context, objectKeys []string) err
 	for e := range errorCh {
 		if e.Err != nil {
 			errs = append(errs, e.Err)
-			s.logger.LogError("failed to delete object from MinIO", e.Err, "object_key", e.ObjectName)
+			s.logger.Debug("minio — unable to delete object", e.Err, "object_key", e.ObjectName, "layer", "repository.image_storage.minio")
 		}
 	}
 
 	if len(errs) > 0 {
-		return fmt.Errorf("batch delete from MinIO had %d errors", len(errs))
+		return fmt.Errorf("batch delete had %d errors, last error: %w", len(errs), errs[len(errs)-1])
 	}
 
+	s.logger.Debug("minio — image batch deleted", "layer", "repository.image_storage.minio")
+
 	return nil
+
 }

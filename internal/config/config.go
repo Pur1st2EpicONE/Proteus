@@ -11,8 +11,8 @@ import (
 type Config struct {
 	Logger     Logger     `mapstructure:"logger"`
 	Server     Server     `mapstructure:"server"`
+	Service    Service    `mapstructure:"service"`
 	Consumer   Consumer   `mapstructure:"consumer"`
-	Producer   Producer   `mapstructure:"producer"`
 	Repository Repository `mapstructure:"repository"`
 }
 
@@ -26,16 +26,16 @@ type Server struct {
 	ReadTimeout     time.Duration `mapstructure:"read_timeout"`
 	WriteTimeout    time.Duration `mapstructure:"write_timeout"`
 	MaxHeaderBytes  int           `mapstructure:"max_header_bytes"`
+	MaxFileSize     int64         `mapstructure:"max_file_size"`
+	MaxRequestSize  int64         `mapstructure:"max_request_size"`
 	ShutdownTimeout time.Duration `mapstructure:"shutdown_timeout"`
 }
 
 type Consumer struct {
-	Brokers []string `mapstructure:"brokers"`
-	Topic   string   `mapstructure:"topic"`
-	GroupID string   `mapstructure:"group_id"`
-}
-
-type Producer struct {
+	Brokers            []string      `mapstructure:"brokers"`
+	Topic              string        `mapstructure:"topic"`
+	GroupID            string        `mapstructure:"group_id"`
+	FetchRetryStrategy RetryStrategy `mapstructure:"fetch_retry_strategy"`
 }
 
 type Repository struct {
@@ -55,7 +55,13 @@ type MetaStorage struct {
 	MaxOpenConns       int           `mapstructure:"max_open_conns"`
 	MaxIdleConns       int           `mapstructure:"max_idle_conns"`
 	ConnMaxLifetime    time.Duration `mapstructure:"conn_max_lifetime"`
+	PendingTimeout     time.Duration `yaml:"pending_timeout"`
 	QueryRetryStrategy RetryStrategy `mapstructure:"query_retry_strategy"`
+}
+
+type Service struct {
+	Cleaner         bool          `mapstructure:"cleaner"`
+	CleanupInterval time.Duration `mapstructure:"cleanup_interval"`
 }
 
 type ImageStorage struct {

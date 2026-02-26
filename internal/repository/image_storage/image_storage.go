@@ -6,20 +6,17 @@ import (
 	"Proteus/internal/models"
 	"Proteus/internal/repository/image_storage/minio"
 	"context"
-	"time"
 
 	m "github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
 type ImageStorage interface {
-	Close() error
 	UploadImage(ctx context.Context, image *models.Image) error
 	DownloadImage(ctx context.Context, objectKey string) ([]byte, error)
-	UploadProcessed(ctx context.Context, objectKey string, file []byte, contentType string) error
-	GetPresignedURL(ctx context.Context, objectKey string, expirySeconds time.Duration) (url string, err error)
-	Delete(ctx context.Context, objectKey string) error
+	DeleteImage(ctx context.Context, objectKey string) error
 	DeleteBatch(ctx context.Context, objectKeys []string) error
+	Close()
 }
 
 func NewImageStorage(logger logger.Logger, config config.ImageStorage, imageDb *m.Client) ImageStorage {

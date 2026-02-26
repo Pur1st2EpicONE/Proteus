@@ -3,17 +3,16 @@ package v1
 import (
 	"Proteus/internal/errs"
 	"Proteus/internal/models"
-	"fmt"
-	"net/http"
 
 	"github.com/wb-go/wbf/ginext"
+	"github.com/wb-go/wbf/helpers"
 )
 
 func (h *Handler) GetImage(c *ginext.Context) {
 
 	id := c.Param("id")
-	if id == "" {
-		respondError(c, fmt.Errorf("id cannot be empty"))
+	if err := helpers.ParseUUID(id); err != nil {
+		respondError(c, errs.ErrInvalidImageID)
 		return
 	}
 
@@ -23,17 +22,8 @@ func (h *Handler) GetImage(c *ginext.Context) {
 		return
 	}
 
-	if status == "deleted" {
-		respondError(c, errs.ErrImageNotFound)
-		return
-	}
-
 	if status == models.StatusPending {
-		c.Header("Retry-After", "5")
-		c.JSON(http.StatusAccepted, ginext.H{
-			"status":  status,
-			"message": "Image is not ready yet",
-		})
+		respondAccepted(c, status)
 		return
 	}
 
@@ -43,6 +33,6 @@ func (h *Handler) GetImage(c *ginext.Context) {
 		return
 	}
 
-	c.Data(http.StatusOK, contentType, data)
+	respondWithData(c, contentType, data)
 
 }

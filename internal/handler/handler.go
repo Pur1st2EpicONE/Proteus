@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"Proteus/internal/config"
 	v1 "Proteus/internal/handler/v1"
 	"Proteus/internal/service"
 	"net/http"
@@ -10,7 +11,7 @@ import (
 
 const templatePath = "web/templates/index.html"
 
-func NewHandler(service service.Service) http.Handler {
+func NewHandler(config config.Server, service service.Service) http.Handler {
 
 	handler := ginext.New("")
 
@@ -18,10 +19,7 @@ func NewHandler(service service.Service) http.Handler {
 	handler.Static("/static", "./web/static")
 
 	apiV1 := handler.Group("/api/v1")
-	handlerV1 := v1.NewHandler(service)
-
-	_ = apiV1
-	_ = handlerV1
+	handlerV1 := v1.NewHandler(config, service)
 
 	apiV1.POST("/upload", handlerV1.UploadImage)
 	apiV1.GET("/image/:id", handlerV1.GetImage)

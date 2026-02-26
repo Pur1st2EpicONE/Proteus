@@ -28,6 +28,7 @@ func bootstrapRepository(logger logger.Logger, config config.Repository) (*dbpg.
 		return nil, nil, fmt.Errorf("fatal at imageDb: %w", err)
 
 	}
+
 	return metaDb, imageDb, nil
 
 }
@@ -79,7 +80,7 @@ func initBucket(ctx context.Context, client *minio.Client, bucketName string, lo
 
 	exists, err := client.BucketExists(ctx, bucketName)
 	if err != nil {
-		return fmt.Errorf("failed check bucket existence: %w", err)
+		return fmt.Errorf("failed to check bucket existence: %w", err)
 	}
 
 	if exists {

@@ -14,6 +14,7 @@ import (
 )
 
 type Consumer struct {
+	ctx          context.Context
 	config       config.Consumer
 	logger       logger.Logger
 	consumer     *kafka.Consumer
@@ -21,43 +22,43 @@ type Consumer struct {
 	imageStorage image_storage.ImageStorage
 }
 
-func NewConsumer(l logger.Logger, cfg config.Consumer, cons *kafka.Consumer,
+func NewConsumer(ctx context.Context, l logger.Logger, cfg config.Consumer, cons *kafka.Consumer,
 	processFunc func(ctx context.Context, task models.ImageProcessTask) error, iStorage image_storage.ImageStorage) *Consumer {
-	return &Consumer{logger: l, config: cfg, consumer: cons, processFunc: processFunc, imageStorage: iStorage}
+	return &Consumer{ctx: ctx, logger: l, config: cfg, consumer: cons, processFunc: processFunc, imageStorage: iStorage}
 }
 
-func (c Consumer) Run(ctx context.Context, strategy retry.Strategy) {
+func (c Consumer) Run() {
 
-	out := make(chan km.Message)
-	c.consumer.StartConsuming(ctx, out, strategy)
+	kafka := make(chan km.Message)
+	c.consumer.StartConsuming(c.ctx, kafka, retry.Strategy(c.config.FetchRetryStrategy))
 
 	for {
 		select {
-		case <-ctx.Done():
+		case <-c.ctx.Done():
 			return
-		case message := <-out:
-			c.handleMessage(ctx, message)
+		case message := <-kafka:
+			c.handleMessage(message)
 		}
 	}
 
 }
 
-func (c *Consumer) handleMessage(ctx context.Context, message km.Message) {
+func (c *Consumer) handleMessage(message km.Message) {
 
 	c.logger.Debug("consumer — received new message", "layer", "broker.kafka")
 
-	var task models.ImageProcessTask
-	if err := json.Unmarshal(message.Value, &task); err != nil {
+	var image models.ImageProcessTask
+	if err := json.Unmarshal(message.Value, &image); err != nil {
 		c.logger.LogError("consumer — failed to unmarshal message", err, "layer", "broker.kafka")
 		return
 	}
 
-	if err := c.processImage(ctx, task); err != nil {
+	if err := c.processImage(image); err != nil {
 		c.logger.LogError("consumer — failed to process image", err, "layer", "broker.kafka")
 		return
 	}
 
-	if err := c.consumer.Commit(ctx, message); err != nil {
+	if err := c.consumer.Commit(c.ctx, message); err != nil {
 		c.logger.LogError("consumer — failed to commit message", err, "layer", "broker.kafka")
 		return
 	}
@@ -66,6 +67,14 @@ func (c *Consumer) handleMessage(ctx context.Context, message km.Message) {
 
 }
 
-func (c *Consumer) processImage(ctx context.Context, image models.ImageProcessTask) error {
-	return c.processFunc(ctx, image)
+func (c *Consumer) processImage(image models.ImageProcessTask) error {
+	return c.processFunc(c.ctx, image)
+}
+
+func (c *Consumer) Close() {
+	if err := c.consumer.Close(); err != nil {
+		c.logger.LogError("consumer — failed to close reader", err, "layer", "broker.kafka")
+	} else {
+		c.logger.LogInfo("consumer — reader closed", "layer", "broker.kafka")
+	}
 }

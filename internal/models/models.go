@@ -17,14 +17,15 @@ const (
 )
 
 type Image struct {
-	ID         string
-	Size       int64
-	ObjectKey  string
-	File       []byte
-	FileHeader *multipart.FileHeader
-	Prefix     string
-	Status     string
-	Request    Request
+	ID          string
+	Size        int64
+	ObjectKey   string
+	File        []byte
+	ContentType string
+	FileHeader  *multipart.FileHeader
+	Prefix      string
+	Status      string
+	Request     Request
 }
 
 type Request struct {
@@ -39,7 +40,7 @@ type ImageProcessTask struct {
 	ID           string `json:"id"`
 	ObjectKey    string `json:"object_key"`
 	OriginalName string `json:"original_name"`
-	MimeType     string `json:"mime_type"`
+	ContentType  string `json:"content_type"`
 	FileSize     int64  `json:"file_size"`
 	Action       string `json:"action"`
 	Watermark    string `json:"watermark"`

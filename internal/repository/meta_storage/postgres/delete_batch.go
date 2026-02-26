@@ -1,10 +1,11 @@
 package postgres
 
 import (
-	"Proteus/internal/models"
 	"context"
 	"fmt"
 	"strings"
+
+	"github.com/wb-go/wbf/retry"
 )
 
 func (s *MetaStorage) DeleteBatch(ctx context.Context, ids []string) error {
@@ -24,15 +25,17 @@ func (s *MetaStorage) DeleteBatch(ctx context.Context, ids []string) error {
 	query := fmt.Sprintf(`
 
     DELETE FROM images 
-    WHERE uuid IN (%s) AND status = $%d`,
+    WHERE uuid IN (%s)`,
 
-		strings.Join(placeholders, ","), len(ids)+1)
-	args = append(args, models.StatusDeleted)
+		strings.Join(placeholders, ","))
 
-	_, err := s.db.ExecContext(ctx, query, args...)
+	_, err := s.db.ExecWithRetry(ctx, retry.Strategy(s.config.QueryRetryStrategy), query, args...)
 	if err != nil {
-		return fmt.Errorf("failed to batch delete images from PG: %w", err)
+		return fmt.Errorf("failed to execute query: %w", err)
 	}
 
+	s.logger.Debug("postgres — meta batch deleted", "layer", "repository.meta_storage.postgres")
+
 	return nil
+
 }

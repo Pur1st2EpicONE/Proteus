@@ -1,17 +1,18 @@
 package v1
 
 import (
-	"fmt"
-	"net/http"
+	"Proteus/internal/errs"
+	"Proteus/internal/models"
 
 	"github.com/wb-go/wbf/ginext"
+	"github.com/wb-go/wbf/helpers"
 )
 
 func (h *Handler) MarkAsDeleted(c *ginext.Context) {
 
 	id := c.Param("id")
-	if id == "" {
-		respondError(c, fmt.Errorf("id cannot be empty"))
+	if err := helpers.ParseUUID(id); err != nil {
+		respondError(c, errs.ErrInvalidImageID)
 		return
 	}
 
@@ -21,6 +22,6 @@ func (h *Handler) MarkAsDeleted(c *ginext.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, ginext.H{"message": "Image deleted successfully"})
+	respondOK(c, models.StatusDeleted)
 
 }

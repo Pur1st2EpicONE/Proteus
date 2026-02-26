@@ -9,24 +9,25 @@ import (
 	"fmt"
 	"image"
 	"image/color"
+	"image/draw"
 	"image/gif"
 	"image/jpeg"
 	"image/png"
-	"time"
 
 	"github.com/disintegration/imaging"
+	"golang.org/x/image/font"
+	"golang.org/x/image/font/inconsolata"
+	"golang.org/x/image/math/fixed"
 )
 
 func (s *Service) ProcessImage(ctx context.Context, task models.ImageProcessTask) error {
-
-	time.Sleep(10 * time.Second)
 
 	_, _, err := s.metaStorage.GetImageMeta(ctx, task.ID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil
 		}
-		return fmt.Errorf("failed to get image status: %w", err)
+		return fmt.Errorf("failed to get image status from meta storage: %w", err)
 	}
 
 	srcImg, format, err := s.getImage(ctx, task.ObjectKey)
@@ -49,9 +50,13 @@ func (s *Service) ProcessImage(ctx context.Context, task models.ImageProcessTask
 		file = buf
 	}
 
-	err = s.imageStorage.UploadProcessed(ctx, task.ObjectKey[2:], file, task.MimeType)
+	err = s.imageStorage.UploadImage(ctx, &models.Image{
+		ObjectKey:   task.ObjectKey[2:],
+		File:        file,
+		Size:        int64(len(file)),
+		ContentType: task.ContentType})
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to upload image to image storage: %w", err)
 	}
 
 	if err := s.metaStorage.MarkAsReady(ctx, task.ObjectKey[2:], task.ID); err != nil {
@@ -66,12 +71,12 @@ func (s *Service) getImage(ctx context.Context, objectKey string) (image.Image, 
 
 	imageBytes, err := s.imageStorage.DownloadImage(ctx, objectKey)
 	if err != nil {
-		return nil, "", err
+		return nil, "", fmt.Errorf("error downloading image: %w", err)
 	}
 
 	srcImg, format, err := image.Decode(bytes.NewReader(imageBytes))
 	if err != nil {
-		return nil, "", err
+		return nil, "", fmt.Errorf("error decoding image: %w", err)
 	}
 
 	return srcImg, format, nil
@@ -99,6 +104,38 @@ func encode(img image.Image, format string) ([]byte, error) {
 }
 
 func addWatermark(src image.Image) image.Image {
-	return imaging.Overlay(src, imaging.New(200, 50, color.NRGBA{0, 0, 0, 100}),
-		image.Pt(src.Bounds().Dx()-210, src.Bounds().Dy()-60), 0.6)
+
+	dst := imaging.Clone(src)
+	bounds := dst.Bounds()
+
+	wmWidth := 150
+	wmHeight := 50
+	wm := image.NewRGBA(image.Rect(0, 0, wmWidth, wmHeight))
+
+	for y := range wmHeight {
+		for x := range wmWidth {
+			wm.Set(x, y, color.NRGBA{0, 0, 0, 100})
+		}
+	}
+
+	text := "Proteus"
+	col := color.White
+	face := inconsolata.Bold8x16
+
+	d := &font.Drawer{Dst: wm, Src: image.NewUniform(col), Face: face}
+
+	textWidth := d.MeasureString(text).Round()
+	textHeight := face.Metrics().Height.Round()
+	descent := face.Metrics().Descent.Round()
+
+	x := (wmWidth - textWidth) / 2
+	y := (wmHeight+textHeight)/2 - descent
+
+	d.Dot = fixed.Point26_6{X: fixed.I(x), Y: fixed.I(y)}
+	d.DrawString(text)
+
+	overlayPoint := image.Pt(bounds.Dx()-wmWidth-10, bounds.Dy()-wmHeight-10)
+	draw.Draw(dst, wm.Bounds().Add(overlayPoint), wm, image.Point{}, draw.Over)
+
+	return dst
 }

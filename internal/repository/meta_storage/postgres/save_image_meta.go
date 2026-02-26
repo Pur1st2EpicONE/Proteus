@@ -11,18 +11,17 @@ import (
 
 func (s *MetaStorage) SaveImageMeta(ctx context.Context, image *models.Image) error {
 
-	_, err := s.db.QueryRowWithRetry(ctx, retry.Strategy{
-		Attempts: s.config.QueryRetryStrategy.Attempts,
-		Delay:    s.config.QueryRetryStrategy.Delay,
-		Backoff:  s.config.QueryRetryStrategy.Backoff}, `
+	_, err := s.db.QueryRowWithRetry(ctx, retry.Strategy(s.config.QueryRetryStrategy), `
 		
-		INSERT INTO images (uuid, object_key, status, updated_at)
-		VALUES ($1, $2, $3, $4)`,
+	INSERT INTO images (uuid, object_key, status, updated_at)
+	VALUES ($1, $2, $3, $4)`,
 
 		image.ID, image.ObjectKey, image.Status, time.Now().UTC())
 	if err != nil {
-		return fmt.Errorf("failed to save image metadata: %w", err)
+		return fmt.Errorf("failed to execute query: %w", err)
 	}
+
+	s.logger.Debug("postgres — meta saved", "image_id", image.ID, "layer", "repository.meta_storage.postgres")
 
 	return nil
 

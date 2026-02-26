@@ -9,13 +9,13 @@ import (
 	"github.com/wb-go/wbf/ginext"
 )
 
-func validateHeader(header *multipart.FileHeader) error {
+func (h *Handler) validateHeader(header *multipart.FileHeader) error {
 
 	if header.Size == 0 {
-		return errs.ErrEmptyFile
+		return errs.ErrNoFile
 	}
 
-	if header.Size > maxFileSize {
+	if header.Size > h.config.MaxFileSize {
 		return errs.ErrFileTooLarge
 	}
 
@@ -32,6 +32,14 @@ func respondOK(c *ginext.Context, response any) {
 	c.JSON(http.StatusOK, ginext.H{"result": response})
 }
 
+func respondAccepted(c *ginext.Context, response any) {
+	c.JSON(http.StatusAccepted, ginext.H{"result": response})
+}
+
+func respondWithData(c *ginext.Context, contentType string, data []byte) {
+	c.Data(http.StatusOK, contentType, data)
+}
+
 func respondError(c *ginext.Context, err error) {
 	if err != nil {
 		status, msg := mapErrorToStatus(err)
@@ -43,13 +51,10 @@ func mapErrorToStatus(err error) (int, string) {
 
 	switch {
 	case errors.Is(err, errs.ErrNoFile),
-		errors.Is(err, errs.ErrFileTooLarge),
 		errors.Is(err, errs.ErrReadFile),
-		errors.Is(err, errs.ErrEmptyFile),
 		errors.Is(err, errs.ErrInvalidImageContent),
 		errors.Is(err, errs.ErrUnsupportedImageFormat),
 		errors.Is(err, errs.ErrInvalidImageDimensions),
-		errors.Is(err, errs.ErrImageTooLargeDimensions),
 		errors.Is(err, errs.ErrNoActionsProvided),
 		errors.Is(err, errs.ErrUnsupportedAction),
 		errors.Is(err, errs.ErrWatermarkTextRequired),
@@ -58,8 +63,13 @@ func mapErrorToStatus(err error) (int, string) {
 		errors.Is(err, errs.ErrInvalidQualityRange):
 		return http.StatusBadRequest, err.Error()
 
-	case rbTooLarge(err):
-		return http.StatusRequestEntityTooLarge, errs.ErrRequestBodyTooLarge.Error()
+	case errors.Is(err, http.ErrMissingFile):
+		return http.StatusBadRequest, errs.ErrNoFile.Error()
+
+	case rbTooLarge(err),
+		errors.Is(err, errs.ErrFileTooLarge),
+		errors.Is(err, errs.ErrImageTooLargeDimensions):
+		return http.StatusRequestEntityTooLarge, err.Error()
 
 	case errors.Is(err, errs.ErrImageNotFound):
 		return http.StatusNotFound, err.Error()

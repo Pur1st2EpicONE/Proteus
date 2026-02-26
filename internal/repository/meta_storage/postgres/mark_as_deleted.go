@@ -6,17 +6,14 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/wb-go/wbf/retry"
 )
 
 func (s *MetaStorage) MarkAsDeleted(ctx context.Context, id string) error {
 
-	tx, err := s.db.BeginTxWithRetry(ctx, retry.Strategy{
-		Attempts: s.config.QueryRetryStrategy.Attempts,
-		Delay:    s.config.QueryRetryStrategy.Delay,
-		Backoff:  s.config.QueryRetryStrategy.Backoff}, nil)
-
+	tx, err := s.db.BeginTxWithRetry(ctx, retry.Strategy(s.config.QueryRetryStrategy), nil)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction for image deletion: %w", err)
 	}
@@ -41,10 +38,10 @@ func (s *MetaStorage) MarkAsDeleted(ctx context.Context, id string) error {
 	_, err = tx.ExecContext(ctx, `
 
     UPDATE images 
-    SET status = $1, updated_at = NOW() 
-    WHERE uuid = $2`,
+    SET status = $1, updated_at = $2 
+    WHERE uuid = $3`,
 
-		models.StatusDeleted, id)
+		models.StatusDeleted, time.Now().UTC(), id)
 	if err != nil {
 		return fmt.Errorf("failed to update image status to deleted: %w", err)
 	}
@@ -52,6 +49,8 @@ func (s *MetaStorage) MarkAsDeleted(ctx context.Context, id string) error {
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("failed to commit image deletion transaction: %w", err)
 	}
+
+	s.logger.Debug("postgres — image marked as deleted", "image_id", id, "layer", "repository.meta_storage.postgres")
 
 	return nil
 

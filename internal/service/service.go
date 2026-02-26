@@ -2,6 +2,7 @@ package service
 
 import (
 	"Proteus/internal/broker"
+	"Proteus/internal/config"
 	"Proteus/internal/logger"
 	"Proteus/internal/models"
 	"Proteus/internal/repository/image_storage"
@@ -16,9 +17,9 @@ type Service interface {
 	GetImageMeta(ctx context.Context, id string) (string, string, error)
 	DownloadImage(ctx context.Context, key string) ([]byte, string, error)
 	MarkAsDeleted(ctx context.Context, id string) error
-	Cleanup(ctx context.Context) error
+	Cleaner(ctx context.Context)
 }
 
-func NewService(logger logger.Logger, producer broker.Producer, metaStorage meta_storage.MetaStorage, imageStorage image_storage.ImageStorage) Service {
-	return impl.NewService(logger, producer, metaStorage, imageStorage)
+func NewService(l logger.Logger, cfg config.Service, prod broker.Producer, ms meta_storage.MetaStorage, is image_storage.ImageStorage) Service {
+	return impl.NewService(l, cfg, prod, ms, is)
 }
