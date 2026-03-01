@@ -15,23 +15,25 @@ up:
 	if [ ! -f config.yaml ]; then cp ./configs/config.full.yaml ./config.yaml; fi
 	if [ ! -f docker-compose.yaml ]; then cp ./deployments/docker-compose.full.yaml ./docker-compose.yaml; fi
 	if [ ! -f Dockerfile ]; then cp ./deployments/Dockerfile ./Dockerfile; fi
-	docker compose up -d postgres app
+	docker compose up -d
+	docker exec proteus-kafka-1 /opt/kafka/bin/kafka-topics.sh --create --if-not-exists --topic images --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
 	rm -f Dockerfile
 
 down:
 	docker compose down 2>/dev/null || true 
 	rm -f Dockerfile docker-compose.yaml config.yaml
 	@docker volume rm proteus_minio-data
+	@docker volume rm proteus_postgres_data
 
 reset:
 	docker volume rm proteus_minio-data
+	docker volume rm proteus_postgres_data
 
 local:
 	if [ ! -f .env ]; then cat .env.example > .env; fi 
 	if [ ! -f config.yaml ]; then cp ./configs/config.dev.yaml ./config.yaml; fi 
 	if [ ! -f docker-compose.yaml ]; then cp ./deployments/docker-compose.dev.yaml ./docker-compose.yaml; fi
 	docker compose up -d
-	until docker exec postgres pg_isready -U ${DB_USER} > /dev/null 2>&1; do sleep 0.5; done
 	docker exec kafka /opt/kafka/bin/kafka-topics.sh --create --if-not-exists --topic images --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
 	bash -c 'trap "exit 0" INT; go run ./cmd/proteus/main.go'
 
@@ -50,8 +52,14 @@ test:
 postgres:
 	docker compose exec postgres psql -U ${DB_USER} -d proteus-db
 
+logs:
+	docker compose logs 	
+
 app_logs:
-	docker compose logs --tail 5 app
+	docker compose logs app
+
+kafka_logs:
+	docker compose logs kafka
 
 postgres_logs:
 	docker compose logs --tail 5 postgres

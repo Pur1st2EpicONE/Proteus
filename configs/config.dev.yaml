@@ -35,8 +35,6 @@ repository:
       backoff: 2                                 # Backoff multiplier for retry delay
   image_storage:
     minio_endpoint: localhost:9000
-    minio_access_key: minioadmin
-    minio_secret_key: minioadmin123456
     minio_bucket: images
     minio_use_ssl: false
     minio_region: us-east-1

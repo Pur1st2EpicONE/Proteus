@@ -18,6 +18,7 @@ WORKDIR /app
 
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /app/proteus /app/proteus
+COPY migrations /app/migrations
 
 EXPOSE 8080
 

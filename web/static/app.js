@@ -14,6 +14,14 @@
   const statusBlock = document.getElementById("statusBlock");
   const statusText = document.getElementById("statusText");
 
+  const statusIdBlock = document.createElement("div");
+  statusIdBlock.style.marginTop = "4px";
+  const statusImageId = document.createElement("span");
+  statusIdBlock.innerHTML = "ID: ";
+  statusIdBlock.appendChild(statusImageId);
+  statusBlock.appendChild(statusIdBlock);
+  statusIdBlock.hidden = true;
+
   const previewBlock = document.getElementById("previewBlock");
   const resultImage = document.getElementById("resultImage");
   const imageIdNode = document.getElementById("imageId");
@@ -31,6 +39,8 @@
     statusBlock.hidden = true;
     previewBlock.hidden = true;
     statusText.textContent = "";
+    statusImageId.textContent = "";
+    statusIdBlock.hidden = true;
     resultImage.src = "";
     imageIdNode.textContent = "";
     currentId = null;
@@ -79,6 +89,7 @@
 
     statusBlock.hidden = false;
     statusText.textContent = "Uploading...";
+    statusIdBlock.hidden = true;
 
     try {
       const res = await fetch("/api/v1/upload", { method: "POST", body: fd });
@@ -91,10 +102,12 @@
 
       const body = await res.json();
       const id = body.result;
-      currentId = id;
-      imageIdNode.textContent = id;
 
+      currentId = id;
+      statusImageId.textContent = id;
+      statusIdBlock.hidden = false;
       statusText.textContent = "In queue for processing...";
+
       startPolling(id);
     } catch (err) {
       statusText.textContent = "Network error: " + err.message;
@@ -212,13 +225,14 @@
     resetUi();
     statusBlock.hidden = false;
     statusText.textContent = "Loading...";
+    statusIdBlock.hidden = false;
+    statusImageId.textContent = id;
 
     try {
       const res = await fetch(`/api/v1/image/${encodeURIComponent(id)}`);
 
       if (res.status === 202) {
         currentId = id;
-        imageIdNode.textContent = id;
         statusText.textContent = "In queue for processing...";
         startPolling(id);
         return;

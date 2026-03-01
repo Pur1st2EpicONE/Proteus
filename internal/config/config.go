@@ -66,8 +66,8 @@ type Service struct {
 
 type ImageStorage struct {
 	MinIOEndpoint  string `mapstructure:"minio_endpoint"`
-	MinIOAccessKey string `mapstructure:"minio_access_key"`
-	MinIOSecretKey string `mapstructure:"minio_secret_key"`
+	MinIOAccessKey string
+	MinIOSecretKey string
 	MinIOBucket    string `mapstructure:"minio_bucket"`
 	MinIOUseSSL    bool   `mapstructure:"minio_use_ssl"`
 	MinIORegion    string `mapstructure:"minio_region"`
@@ -107,5 +107,8 @@ func loadEnvs(conf *Config) {
 
 	conf.Repository.MetaStorage.Username = os.Getenv("DB_USER")
 	conf.Repository.MetaStorage.Password = os.Getenv("DB_PASSWORD")
+
+	conf.Repository.ImageStorage.MinIOAccessKey = os.Getenv("MINIO_ROOT_USER")
+	conf.Repository.ImageStorage.MinIOSecretKey = os.Getenv("MINIO_ROOT_PASSWORD")
 
 }
