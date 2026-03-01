@@ -4,6 +4,7 @@ import (
 	"Proteus/internal/config"
 	v1 "Proteus/internal/handler/v1"
 	"Proteus/internal/service"
+	"html/template"
 	"net/http"
 
 	"github.com/wb-go/wbf/ginext"
@@ -25,6 +26,16 @@ func NewHandler(config config.Server, service service.Service) http.Handler {
 	apiV1.GET("/image/:id", handlerV1.GetImage)
 	apiV1.DELETE("/image/:id", handlerV1.MarkAsDeleted)
 
+	handler.GET("/", homePage(template.Must(template.ParseFiles(templatePath))))
+
 	return handler
 
+}
+
+func homePage(t *template.Template) ginext.HandlerFunc {
+	return func(c *ginext.Context) {
+		if err := t.Execute(c.Writer, nil); err != nil {
+			c.AbortWithStatusJSON(http.StatusInternalServerError, ginext.H{"error": "Failed to render page"})
+		}
+	}
 }

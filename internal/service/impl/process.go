@@ -21,9 +21,6 @@ import (
 	"golang.org/x/image/math/fixed"
 )
 
-const wmWidth = 150
-const wmHeight = 50
-
 func (s *Service) ProcessImage(ctx context.Context, task models.ImageProcessTask) error {
 
 	_, _, err := s.metaStorage.GetImageMeta(ctx, task.ID)
@@ -120,31 +117,42 @@ func addWatermark(src image.Image, watermark string) image.Image {
 
 	res := imaging.Clone(src)
 	bounds := res.Bounds()
+	srcWidth := bounds.Dx()
 
-	wm := image.NewRGBA(image.Rect(0, 0, wmWidth, wmHeight))
+	targetWmWidth := min(max(int(float64(srcWidth)*0.25), 200), 500)
+	targetWmHeight := targetWmWidth / 3
 
-	for y := range wmHeight {
-		for x := range wmWidth {
-			wm.Set(x, y, color.NRGBA{0, 0, 0, 100})
+	face := inconsolata.Bold8x16
+
+	dMeasure := &font.Drawer{Face: face}
+	textWidth := dMeasure.MeasureString(watermark).Round()
+
+	baseWmWidth := max(textWidth+40, 180)
+	baseWmHeight := 70
+
+	baseWm := image.NewRGBA(image.Rect(0, 0, baseWmWidth, baseWmHeight))
+
+	for y := range baseWmHeight {
+		for x := range baseWmWidth {
+			baseWm.Set(x, y, color.NRGBA{0, 0, 0, 120})
 		}
 	}
 
 	colour := color.White
-	face := inconsolata.Bold8x16
+	d := &font.Drawer{Dst: baseWm, Src: image.NewUniform(colour), Face: face}
 
-	d := &font.Drawer{Dst: wm, Src: image.NewUniform(colour), Face: face}
-
-	textWidth := d.MeasureString(watermark).Round()
 	textHeight := face.Metrics().Height.Round()
 	descent := face.Metrics().Descent.Round()
 
-	x := (wmWidth - textWidth) / 2
-	y := (wmHeight+textHeight)/2 - descent
+	x := (baseWmWidth - textWidth) / 2
+	y := (baseWmHeight+textHeight)/2 - descent
 
 	d.Dot = fixed.Point26_6{X: fixed.I(x), Y: fixed.I(y)}
 	d.DrawString(watermark)
 
-	overlayPoint := image.Pt(bounds.Dx()-wmWidth-10, bounds.Dy()-wmHeight-10)
+	wm := imaging.Resize(baseWm, targetWmWidth, targetWmHeight, imaging.Lanczos)
+	overlayPoint := image.Pt(bounds.Dx()-targetWmWidth-10, bounds.Dy()-targetWmHeight-10)
+
 	draw.Draw(res, wm.Bounds().Add(overlayPoint), wm, image.Point{}, draw.Over)
 
 	return res

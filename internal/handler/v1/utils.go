@@ -52,6 +52,7 @@ func mapErrorToStatus(err error) (int, string) {
 	switch {
 	case errors.Is(err, errs.ErrNoFile),
 		errors.Is(err, errs.ErrReadFile),
+		errors.Is(err, errs.ErrInvalidImageID),
 		errors.Is(err, errs.ErrInvalidImageContent),
 		errors.Is(err, errs.ErrUnsupportedImageFormat),
 		errors.Is(err, errs.ErrInvalidImageDimensions),
@@ -59,8 +60,7 @@ func mapErrorToStatus(err error) (int, string) {
 		errors.Is(err, errs.ErrUnsupportedAction),
 		errors.Is(err, errs.ErrWatermarkTextRequired),
 		errors.Is(err, errs.ErrResizeDimensionsRequired),
-		errors.Is(err, errs.ErrNegativeResizeDimensions),
-		errors.Is(err, errs.ErrInvalidQualityRange):
+		errors.Is(err, errs.ErrNegativeResizeDimensions):
 		return http.StatusBadRequest, err.Error()
 
 	case errors.Is(err, http.ErrMissingFile):

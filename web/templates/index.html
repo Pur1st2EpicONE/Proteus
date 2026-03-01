@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Proteus — Image Processor</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <main class="container">
+    <h1>Proteus — Image Upload</h1>
+
+    <form id="uploadForm" class="card">
+      <label class="field">
+        <span>File</span>
+        <input type="file" name="image" id="imageInput" accept="image/*" required>
+      </label>
+
+      <label class="field">
+        <span>Action</span>
+        <select name="action" id="actionSelect">
+          <option value="resize">resize</option>
+          <option value="thumbnail">thumbnail</option>
+          <option value="watermark">watermark</option>
+        </select>
+      </label>
+
+      <label class="field small" id="widthField">
+        <span>Width (px)</span>
+        <input type="number" name="width" id="widthInput" min="1">
+      </label>
+
+      <label class="field small" id="heightField">
+        <span>Height (px)</span>
+        <input type="number" name="height" id="heightInput" min="1">
+      </label>
+
+      <label class="field" id="watermarkField">
+        <span>Watermark (text)</span>
+        <input type="text" name="watermark" id="watermarkInput" placeholder="Watermark text">
+      </label>
+
+      <div class="buttons">
+        <button type="submit">Upload</button>
+        <button type="button" id="clearBtn">Clear</button>
+      </div>
+    </form>
+
+    <section class="search card">
+      <h2>Search by ID</h2>
+      <div class="field">
+        <span>Image ID</span>
+        <input type="text" id="searchIdInput" placeholder="Enter image ID to load">
+      </div>
+      <div class="buttons">
+        <button type="button" id="searchBtn">Search</button>
+      </div>
+    </section>
+
+    <section class="status card" id="statusBlock" hidden>
+      <div id="statusText">Waiting for upload...</div>
+    </section>
+
+    <section class="preview card" id="previewBlock" hidden>
+      <h2>Result</h2>
+      <img id="resultImage" alt="result" />
+      
+      <div class="meta">
+        ID: 
+        <span id="imageId"></span>
+        <button id="copyIdBtn" class="copy-btn" title="Copy ID to clipboard" type="button">🔳</button>
+      </div>
+
+      <div class="buttons">
+        <button id="downloadBtn">Download</button>
+        <button id="deleteBtn">Delete</button>
+      </div>
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
