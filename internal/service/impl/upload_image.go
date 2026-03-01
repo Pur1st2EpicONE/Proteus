@@ -41,9 +41,8 @@ func (s *Service) UploadImage(ctx context.Context, image *models.Image) (string,
 		Action:       image.Request.Action,
 		Watermark:    image.Request.Watermark,
 		Height:       image.Request.Height,
-		Width:        image.Request.Width,
-		Quality:      image.Request.Quality,
-	})
+		Width:        image.Request.Width})
+
 	if err != nil {
 		s.logger.LogError("service — failed to marshal image", err, "image_id", image.ID, "layer", "service.impl")
 		return "", err
@@ -55,7 +54,7 @@ func (s *Service) UploadImage(ctx context.Context, image *models.Image) (string,
 		return "", err
 	}
 
-	s.logger.Debug("service — image uploaded, metadata saved and processing queued", "id", image.ID, "layer", "service.impl")
+	s.logger.Debug("service — image uploaded, metadata saved and processing queued", "image_id", image.ID, "layer", "service.impl")
 
 	return image.ID, nil
 

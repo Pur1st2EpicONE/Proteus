@@ -1,6 +1,7 @@
 package impl
 
 import (
+	"Proteus/internal/errs"
 	"Proteus/internal/models"
 	"bytes"
 	"context"
@@ -19,6 +20,9 @@ import (
 	"golang.org/x/image/font/inconsolata"
 	"golang.org/x/image/math/fixed"
 )
+
+const wmWidth = 150
+const wmHeight = 50
 
 func (s *Service) ProcessImage(ctx context.Context, task models.ImageProcessTask) error {
 
@@ -45,9 +49,17 @@ func (s *Service) ProcessImage(ctx context.Context, task models.ImageProcessTask
 		file = buf
 
 	case models.Watermark:
-		img := addWatermark(srcImg)
+		img := addWatermark(srcImg, task.Watermark)
 		buf, _ := encode(img, format)
 		file = buf
+
+	case models.Resize:
+		img := imaging.Resize(srcImg, task.Width, task.Height, imaging.Lanczos)
+		buf, _ := encode(img, format)
+		file = buf
+
+	default:
+		return errs.ErrUnsupportedAction
 	}
 
 	err = s.imageStorage.UploadImage(ctx, &models.Image{
@@ -55,6 +67,7 @@ func (s *Service) ProcessImage(ctx context.Context, task models.ImageProcessTask
 		File:        file,
 		Size:        int64(len(file)),
 		ContentType: task.ContentType})
+
 	if err != nil {
 		return fmt.Errorf("failed to upload image to image storage: %w", err)
 	}
@@ -103,13 +116,11 @@ func encode(img image.Image, format string) ([]byte, error) {
 
 }
 
-func addWatermark(src image.Image) image.Image {
+func addWatermark(src image.Image, watermark string) image.Image {
 
-	dst := imaging.Clone(src)
-	bounds := dst.Bounds()
+	res := imaging.Clone(src)
+	bounds := res.Bounds()
 
-	wmWidth := 150
-	wmHeight := 50
 	wm := image.NewRGBA(image.Rect(0, 0, wmWidth, wmHeight))
 
 	for y := range wmHeight {
@@ -118,13 +129,12 @@ func addWatermark(src image.Image) image.Image {
 		}
 	}
 
-	text := "Proteus"
-	col := color.White
+	colour := color.White
 	face := inconsolata.Bold8x16
 
-	d := &font.Drawer{Dst: wm, Src: image.NewUniform(col), Face: face}
+	d := &font.Drawer{Dst: wm, Src: image.NewUniform(colour), Face: face}
 
-	textWidth := d.MeasureString(text).Round()
+	textWidth := d.MeasureString(watermark).Round()
 	textHeight := face.Metrics().Height.Round()
 	descent := face.Metrics().Descent.Round()
 
@@ -132,10 +142,11 @@ func addWatermark(src image.Image) image.Image {
 	y := (wmHeight+textHeight)/2 - descent
 
 	d.Dot = fixed.Point26_6{X: fixed.I(x), Y: fixed.I(y)}
-	d.DrawString(text)
+	d.DrawString(watermark)
 
 	overlayPoint := image.Pt(bounds.Dx()-wmWidth-10, bounds.Dy()-wmHeight-10)
-	draw.Draw(dst, wm.Bounds().Add(overlayPoint), wm, image.Point{}, draw.Over)
+	draw.Draw(res, wm.Bounds().Add(overlayPoint), wm, image.Point{}, draw.Over)
 
-	return dst
+	return res
+
 }

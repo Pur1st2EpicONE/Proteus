@@ -33,7 +33,6 @@ type Request struct {
 	Watermark string
 	Height    int
 	Width     int
-	Quality   int
 }
 
 type ImageProcessTask struct {
@@ -46,5 +45,4 @@ type ImageProcessTask struct {
 	Watermark    string `json:"watermark"`
 	Height       int    `json:"height"`
 	Width        int    `json:"width "`
-	Quality      int    `json:"quality"`
 }

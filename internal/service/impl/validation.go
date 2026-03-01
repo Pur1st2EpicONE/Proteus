@@ -20,37 +20,56 @@ func validate(image *models.Image) error {
 	return validateFile(image.File)
 }
 
-var allowed = map[string]struct{}{models.Thumbnail: {}, models.Resize: {}, models.Watermark: {}}
-
 func validateRequest(request models.Request) error {
 
-	if len(request.Action) == 0 {
-		return errs.ErrNoActionsProvided
+	if err := validateAction(request.Action); err != nil {
+		return err
 	}
 
-	if _, ok := allowed[request.Action]; !ok {
+	switch request.Action {
+	case models.Thumbnail:
+		return nil
+	case models.Watermark:
+		return validateWatermark(request.Watermark)
+	case models.Resize:
+		return validateResize(request.Width, request.Height)
+	default:
 		return errs.ErrUnsupportedAction
 	}
 
-	if request.Action == models.Watermark {
-		if strings.TrimSpace(request.Watermark) == "" {
-			return errs.ErrWatermarkTextRequired
-		}
+}
+
+var allowedActions = map[string]struct{}{models.Thumbnail: {}, models.Resize: {}, models.Watermark: {}}
+
+func validateAction(action string) error {
+
+	if strings.TrimSpace(action) == "" {
+		return errs.ErrNoActionsProvided
 	}
 
-	if request.Action == models.Resize {
-		if request.Width <= 0 && request.Height <= 0 {
-			return errs.ErrResizeDimensionsRequired
-		}
-		if request.Width < 0 || request.Height < 0 {
-			return errs.ErrNegativeResizeDimensions
-		}
+	if _, ok := allowedActions[action]; !ok {
+		return errs.ErrUnsupportedAction
 	}
 
-	if request.Quality != 0 {
-		if request.Quality < 1 || request.Quality > 100 {
-			return errs.ErrInvalidQualityRange
-		}
+	return nil
+
+}
+
+func validateWatermark(watermark string) error {
+	if strings.TrimSpace(watermark) == "" {
+		return errs.ErrWatermarkTextRequired
+	}
+	return nil
+}
+
+func validateResize(width int, height int) error {
+
+	if width == 0 && height == 0 {
+		return errs.ErrResizeDimensionsRequired
+	}
+
+	if width < 0 || height < 0 {
+		return errs.ErrNegativeResizeDimensions
 	}
 
 	return nil

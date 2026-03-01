@@ -5,5 +5,4 @@ type UploadImageDTO struct {
 	Watermark string `form:"watermark"`
 	Height    int    `form:"height"`
 	Width     int    `form:"width"`
-	Quality   int    `form:"quality"`
 }

@@ -49,8 +49,7 @@ func (h *Handler) UploadImage(c *ginext.Context) {
 			Action:    request.Action,
 			Watermark: request.Watermark,
 			Height:    request.Height,
-			Width:     request.Width,
-			Quality:   request.Quality}})
+			Width:     request.Width}})
 	if err != nil {
 		respondError(c, err)
 		return
