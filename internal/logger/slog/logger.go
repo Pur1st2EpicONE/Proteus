@@ -1,3 +1,5 @@
+// Package slog provides a JSON-based structured logger implementation for the service.
+// It wraps Go's slog package and supports logging to stdout or a file with configurable log levels.
 package slog
 
 import (

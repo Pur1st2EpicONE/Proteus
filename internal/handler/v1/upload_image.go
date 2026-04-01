@@ -32,12 +32,7 @@ func (h *Handler) UploadImage(c *ginext.Context) {
 	}
 
 	file, err := io.ReadAll(io.LimitReader(multipartFile, h.config.MaxFileSize+1))
-	if err != nil {
-		respondError(c, err)
-		return
-	}
-
-	if int64(len(file)) > h.config.MaxFileSize {
+	if err != nil || int64(len(file)) > h.config.MaxFileSize {
 		respondError(c, errs.ErrFileTooLarge)
 		return
 	}
