@@ -24,7 +24,7 @@ func (h *Handler) UploadImage(c *ginext.Context) {
 		respondError(c, err)
 		return
 	}
-	defer multipartFile.Close()
+	defer func() { _ = multipartFile.Close() }()
 
 	if err := h.validateHeader(header); err != nil {
 		respondError(c, err)

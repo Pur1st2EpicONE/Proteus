@@ -14,7 +14,7 @@ func (s *ImageStorage) DownloadImage(ctx context.Context, objectKey string) ([]b
 	if err != nil {
 		return nil, fmt.Errorf("unable to get object: %w", err)
 	}
-	defer object.Close()
+	defer func() { _ = object.Close() }()
 
 	var buf bytes.Buffer
 	if _, err := buf.ReadFrom(object); err != nil {

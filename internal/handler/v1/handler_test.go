@@ -20,10 +20,8 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-const (
-	testUUID    = "123e4567-e89b-12d3-a456-426614174000"
-	invalidUUID = "lqhfjlqhwfljkhqwklf"
-)
+const testUUID = "123e4567-e89b-12d3-a456-426614174000"
+const invalidUUID = "lqhfjlqhwfljkhqwklf"
 
 func createUploadRequest(t *testing.T, fileContent []byte, filename, contentType string, fields map[string]string) *http.Request {
 
@@ -137,13 +135,17 @@ func TestHandler_UploadImage(t *testing.T) {
 		require.Equal(t, http.StatusOK, response.Code)
 		require.Contains(t, response.Body.String(), "id123")
 	})
+
 }
 
 func TestHandler_GetImage(t *testing.T) {
+
 	controller := gomock.NewController(t)
 	defer controller.Finish()
+
 	mockService := mocks.NewMockService(controller)
 	header := NewHandler(config.Server{}, mockService)
+
 	router := ginext.New("")
 	router.GET("/image/:id", header.GetImage)
 

@@ -17,7 +17,7 @@ func (s *MetaStorage) MarkAsDeleted(ctx context.Context, id string) error {
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction for image deletion: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var existingImage models.Image
 	err = tx.QueryRowContext(ctx, `

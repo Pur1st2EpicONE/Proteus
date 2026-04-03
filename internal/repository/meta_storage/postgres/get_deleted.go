@@ -22,7 +22,7 @@ func (s *MetaStorage) GetDeleted(ctx context.Context) ([]models.Image, error) {
 		return nil, err
 	}
 
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var images []models.Image
 
 	for rows.Next() {
