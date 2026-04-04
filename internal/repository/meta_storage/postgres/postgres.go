@@ -17,10 +17,14 @@ func NewMetaStorage(logger logger.Logger, config config.MetaStorage, db *dbpg.DB
 	return &MetaStorage{logger: logger, config: config, db: db}
 }
 
-func (s *MetaStorage) Close() {
-	if err := s.db.Master.Close(); err != nil {
-		s.logger.LogError("postgres — failed to close properly", err, "layer", "repository.meta_storage.postgres")
+func (m *MetaStorage) Close() {
+	if err := m.db.Master.Close(); err != nil {
+		m.logger.LogError("postgres — failed to close properly", err, "layer", "repository.meta_storage.postgres")
 	} else {
-		s.logger.LogInfo("postgres — database closed", "layer", "repository.meta_storage.postgres")
+		m.logger.LogInfo("postgres — database closed", "layer", "repository.meta_storage.postgres")
 	}
+}
+
+func (m *MetaStorage) DB() *dbpg.DB {
+	return m.db
 }

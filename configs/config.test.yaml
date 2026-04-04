@@ -26,6 +26,6 @@ database:
   max_idle_conns: 10                           # Maximum number of idle connections
   conn_max_lifetime: 30m                       # Maximum lifetime of a database connection
   query_retry_strategy:
-    attempts: 3                                # Number of retry attempts for failed DB queries
+    attempts: 1                                # Number of retry attempts for failed DB queries
     delay: 200ms                               # Initial delay between retries
     backoff: 2                                 # Backoff multiplier for retry delay

@@ -11,9 +11,9 @@ import (
 	"github.com/wb-go/wbf/retry"
 )
 
-func (s *MetaStorage) MarkAsDeleted(ctx context.Context, id string) error {
+func (m *MetaStorage) MarkAsDeleted(ctx context.Context, id string) error {
 
-	tx, err := s.db.BeginTxWithRetry(ctx, retry.Strategy(s.config.QueryRetryStrategy), nil)
+	tx, err := m.db.BeginTxWithRetry(ctx, retry.Strategy(m.config.QueryRetryStrategy), nil)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction for image deletion: %w", err)
 	}
@@ -50,7 +50,7 @@ func (s *MetaStorage) MarkAsDeleted(ctx context.Context, id string) error {
 		return fmt.Errorf("failed to commit image deletion transaction: %w", err)
 	}
 
-	s.logger.Debug("postgres — image marked as deleted", "image_id", id, "layer", "repository.meta_storage.postgres")
+	m.logger.Debug("postgres — image marked as deleted", "image_id", id, "layer", "repository.meta_storage.postgres")
 
 	return nil
 

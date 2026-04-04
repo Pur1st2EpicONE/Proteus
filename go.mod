@@ -4,6 +4,7 @@ go 1.25.1
 
 require (
 	github.com/disintegration/imaging v1.6.2
+	github.com/lib/pq v1.11.2
 	github.com/minio/minio-go/v7 v7.0.98
 	github.com/pressly/goose/v3 v3.26.0
 	github.com/segmentio/kafka-go v0.4.37
@@ -36,7 +37,6 @@ require (
 	github.com/klauspost/cpuid/v2 v2.2.11 // indirect
 	github.com/klauspost/crc32 v1.3.0 // indirect
 	github.com/leodido/go-urn v1.2.4 // indirect
-	github.com/lib/pq v1.11.2 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mfridman/interpolate v0.0.2 // indirect

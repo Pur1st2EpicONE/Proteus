@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: ["main", "master"]
+  pull_request:
+    branches: ["main", "master"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    env:
+      DB_USER: ${{ secrets.DB_USER }}
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      DB_NAME: proteus_test
+      MINIO_ROOT_USER: ${{ secrets.MINIO_ROOT_USER }}
+      MINIO_ROOT_PASSWORD: ${{ secrets.MINIO_ROOT_PASSWORD }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.1'
+
+      - name: Install golangci-lint
+        run: |
+          go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+
+      - name: Run golangci-lint
+        run: golangci-lint run ./...
+
+      - name: Prepare test environment
+        run: |
+          cp .env.example .env
+          cp ./configs/config.test.yaml ./config.yaml
+          cp ./deployments/docker-compose.test.yaml ./docker-compose.yaml
+
+      - name: Start test services (Postgres + MinIO)
+        run: |
+          docker compose up -d postgres-test minio-test
+
+      - name: Wait for Postgres
+        run: |
+          for i in $(seq 1 60); do
+            if docker exec postgres-test pg_isready -U "$DB_USER" -d "$DB_NAME" > /dev/null 2>&1; then
+              echo "Postgres is ready!"
+              break
+            fi
+            sleep 1
+          done || (docker logs postgres-test && exit 1)
+
+      - name: Wait for MinIO
+        run: |
+          for i in $(seq 1 60); do
+            if docker exec minio-test curl -s -f http://localhost:9000/minio/health/live > /dev/null 2>&1; then
+              echo "MinIO is ready!"
+              break
+            fi
+            sleep 1
+          done || (docker logs minio-test && exit 1)
+
+      - name: Run all tests
+        run: |
+          docker compose run --rm app-test
+
+      - name: Cleanup
+        if: always()
+        run: |
+          docker compose down -v --remove-orphans || true

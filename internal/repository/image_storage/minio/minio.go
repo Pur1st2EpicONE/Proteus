@@ -23,3 +23,13 @@ func (s *ImageStorage) Close() {
 		s.logger.LogInfo("minio — idle connections closed", "layer", "repository.image_storage.minio")
 	}
 }
+
+// Client returns the underlying MinIO client (for tests only)
+func (s *ImageStorage) Client() *minio.Client {
+	return s.client
+}
+
+// BucketName returns the bucket name (for tests only)
+func (s *ImageStorage) BucketName() string {
+	return s.bucketName
+}

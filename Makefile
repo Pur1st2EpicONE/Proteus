@@ -1,4 +1,4 @@
-.PHONY: all up down reset local test postgres app_logs postgres_logs lint .env .env.example help
+.PHONY: all up down reset local lint test kafka minio postgres app_logs kafka_logs minio_logs postgres_logs .env .env.example help
 .POSIX:
 .SILENT:
 
@@ -35,50 +35,60 @@ local:
 	docker exec kafka /opt/kafka/bin/kafka-topics.sh --create --if-not-exists --topic images --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
 	bash -c 'trap "exit 0" INT; go run ./cmd/proteus/main.go'
 
+lint:
+	golangci-lint run ./...
+
 test:
 	if [ ! -f .env ]; then cat .env.example > .env	; fi 
 	if [ ! -f config.yaml ]; then cp ./configs/config.test.yaml ./config.yaml; fi 
 	if [ ! -f docker-compose.yaml ]; then cp ./deployments/docker-compose.test.yaml ./docker-compose.yaml; fi
-	COMPOSE_BAKE=true docker compose -f docker-compose.yaml up -d postgres-test
+	COMPOSE_BAKE=true docker compose -f docker-compose.yaml up -d minio-test postgres-test
 	until docker exec postgres-test pg_isready -U ${DB_USER} -d postgres-test > /dev/null 2>&1; do sleep 0.5; done
 	echo "Running tests, please be patient (≈2 min)"
-	docker compose -f docker-compose.yaml run --rm app-test > .temp 2>/dev/null
+	COMPOSE_BAKE=true docker compose -f docker-compose.yaml run --rm app-test > .temp 2>/dev/null
 	cat .temp; rm -f .temp
 	docker compose -f docker-compose.yaml down -v > /dev/null 2>&1
 	rm -f docker-compose.yaml config.yaml .env
 
+kafka:
+	docker compose exec kafka bash
+
+minio:
+	docker compose exec minio sh
+
 postgres:
 	docker compose exec postgres psql -U ${DB_USER} -d proteus-db
 
-logs:
-	docker compose logs 	
-
 app_logs:
-	docker compose logs app
+	docker compose logs --tail 10 app
 
 kafka_logs:
-	docker compose logs kafka
+	docker compose logs --tail 10 kafka
+
+minio_logs:
+	docker compose logs --tail 10 minio
 
 postgres_logs:
-	docker compose logs --tail 5 postgres
-
-lint:
-	golangci-lint run ./...
+	docker compose logs --tail 10 postgres
 
 .env:
 	@:
 
 help:
 	@echo " ———————————————————————————————————————————————————————————————————————————————————— "
-	@echo "| up             | Start all services (postgres, app) in background                  |"
+	@echo "| up             | Start all services (postgres, app, minio, kafka) in background    |"
 	@echo "| down           | Stop and remove all containers, networks, and temporary files     |"
-	@echo "| reset          | Remove postgres Docker volume                                     |"
+	@echo "| reset          | Remove postgres and minio Docker volumes                          |"
 	@echo "| local          | Start local dev environment (go 1.25.1 required)                  |"
-	@echo "| test           | Run unit and integration tests                                    |"
-	@echo "| postgres       | Open psql shell inside postgres container                         |"
-	@echo "| app_logs       | Show last 5 lines of app logs                                     |"
-	@echo "| postgres_logs  | Show last 5 lines of postgres logs                                |"
 	@echo "| lint           | Run golangci-lint                                                 |"
+	@echo "| test           | Run unit and integration tests                                    |"
+	@echo "| kafka          | Open bash shell inside kafka container                            |"
+	@echo "| minio          | Open shell inside minio container                                 |"
+	@echo "| postgres       | Open psql shell inside postgres container                         |"
+	@echo "| app_logs       | Show last 10 lines of app logs                                    |"
+	@echo "| kafka_logs     | Show last 10 lines of kafka logs                                  |"
+	@echo "| minio_logs     | Show last 10 lines of minio logs                                  |"
+	@echo "| postgres_logs  | Show last 10 lines of postgres logs                               |"
 	@echo " ———————————————————————————————————————————————————————————————————————————————————— "
 
 .DEFAULT:

@@ -7,9 +7,9 @@ import (
 	"github.com/wb-go/wbf/retry"
 )
 
-func (s *MetaStorage) GetImageMeta(ctx context.Context, id string) (key string, status string, err error) {
+func (m *MetaStorage) GetImageMeta(ctx context.Context, id string) (key string, status string, err error) {
 
-	row, err := s.db.QueryRowWithRetry(ctx, retry.Strategy(s.config.QueryRetryStrategy), `
+	row, err := m.db.QueryRowWithRetry(ctx, retry.Strategy(m.config.QueryRetryStrategy), `
 
     SELECT COALESCE(object_key, ''), status
     FROM images

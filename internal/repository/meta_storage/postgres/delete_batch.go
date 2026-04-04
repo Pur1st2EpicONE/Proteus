@@ -8,7 +8,7 @@ import (
 	"github.com/wb-go/wbf/retry"
 )
 
-func (s *MetaStorage) DeleteBatch(ctx context.Context, ids []string) error {
+func (m *MetaStorage) DeleteBatch(ctx context.Context, ids []string) error {
 
 	if len(ids) == 0 {
 		return nil
@@ -29,12 +29,12 @@ func (s *MetaStorage) DeleteBatch(ctx context.Context, ids []string) error {
 
 		strings.Join(placeholders, ","))
 
-	_, err := s.db.ExecWithRetry(ctx, retry.Strategy(s.config.QueryRetryStrategy), query, args...)
+	_, err := m.db.ExecWithRetry(ctx, retry.Strategy(m.config.QueryRetryStrategy), query, args...)
 	if err != nil {
 		return fmt.Errorf("failed to execute query: %w", err)
 	}
 
-	s.logger.Debug("postgres — meta batch deleted", "layer", "repository.meta_storage.postgres")
+	m.logger.Debug("postgres — meta batch deleted", "layer", "repository.meta_storage.postgres")
 
 	return nil
 

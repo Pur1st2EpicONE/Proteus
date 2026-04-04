@@ -8,16 +8,16 @@ import (
 	"github.com/wb-go/wbf/retry"
 )
 
-func (s *MetaStorage) GetDeleted(ctx context.Context) ([]models.Image, error) {
+func (m *MetaStorage) GetDeleted(ctx context.Context) ([]models.Image, error) {
 
-	rows, err := s.db.QueryWithRetry(ctx, retry.Strategy(s.config.QueryRetryStrategy), `
+	rows, err := m.db.QueryWithRetry(ctx, retry.Strategy(m.config.QueryRetryStrategy), `
 
     SELECT uuid, object_key 
     FROM images 
     WHERE status = $1
 	OR (status = $2 AND updated_at < $3)`,
 
-		models.StatusDeleted, models.StatusPending, time.Now().UTC().Add(-s.config.PendingTimeout))
+		models.StatusDeleted, models.StatusPending, time.Now().UTC().Add(-m.config.PendingTimeout))
 	if err != nil {
 		return nil, err
 	}

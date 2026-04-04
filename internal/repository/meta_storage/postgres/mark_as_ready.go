@@ -9,9 +9,9 @@ import (
 	"github.com/wb-go/wbf/retry"
 )
 
-func (s *MetaStorage) MarkAsReady(ctx context.Context, objectKey string, uuid string) error {
+func (m *MetaStorage) MarkAsReady(ctx context.Context, objectKey string, uuid string) error {
 
-	result, err := s.db.ExecWithRetry(ctx, retry.Strategy(s.config.QueryRetryStrategy), `
+	result, err := m.db.ExecWithRetry(ctx, retry.Strategy(m.config.QueryRetryStrategy), `
 
     UPDATE images
     SET object_key = $1, status = $2, updated_at = $3 
@@ -31,7 +31,7 @@ func (s *MetaStorage) MarkAsReady(ctx context.Context, objectKey string, uuid st
 		return fmt.Errorf("image with uuid %s not found", uuid)
 	}
 
-	s.logger.Debug("postgres — image marked as ready", "image_id", uuid, "layer", "repository.meta_storage.postgres")
+	m.logger.Debug("postgres — image marked as ready", "image_id", uuid, "layer", "repository.meta_storage.postgres")
 
 	return nil
 
