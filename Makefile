@@ -1,8 +1,11 @@
-.PHONY: all up down reset local lint test kafka minio postgres app_logs kafka_logs minio_logs postgres_logs .env .env.example help
+.PHONY: all up down reset migrate-up migrate-down local lint test kafka minio postgres app_logs kafka_logs minio_logs postgres_logs .env .env.example help
 .POSIX:
 .SILENT:
 
 -include .env.example .env
+
+PROJECT_NAME = proteus
+GOOSE_CMD = goose -dir ./migrations postgres "user=${DB_USER} password=${DB_PASSWORD} dbname=${PROJECT_NAME}-db host=localhost port=5433 sslmode=disable"
 
 all: up
 
@@ -16,7 +19,7 @@ up:
 	if [ ! -f docker-compose.yaml ]; then cp ./deployments/docker-compose.full.yaml ./docker-compose.yaml; fi
 	if [ ! -f Dockerfile ]; then cp ./deployments/Dockerfile ./Dockerfile; fi
 	COMPOSE_BAKE=true docker compose up -d
-	docker exec proteus-kafka-1 /opt/kafka/bin/kafka-topics.sh --create --if-not-exists --topic images --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
+	docker exec ${PROJECT_NAME}-kafka-1 /opt/kafka/bin/kafka-topics.sh --create --if-not-exists --topic images --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
 	rm -f Dockerfile
 
 down:
@@ -27,13 +30,19 @@ reset:
 	docker volume rm proteus_minio-data
 	docker volume rm proteus_postgres_data
 
+migrate-up:
+	@if command -v goose > /dev/null 2>&1; then ${GOOSE_CMD} up; else echo "You need Goose migration tool to use this command!"; fi
+
+migrate-down:
+	@if command -v goose > /dev/null 2>&1; then ${GOOSE_CMD} down; else echo "You need Goose migration tool to use this command!"; fi
+
 local:
 	if [ ! -f .env ]; then cat .env.example > .env; fi 
 	if [ ! -f config.yaml ]; then cp ./configs/config.dev.yaml ./config.yaml; fi 
 	if [ ! -f docker-compose.yaml ]; then cp ./deployments/docker-compose.dev.yaml ./docker-compose.yaml; fi
 	COMPOSE_BAKE=true docker compose up -d
 	docker exec kafka /opt/kafka/bin/kafka-topics.sh --create --if-not-exists --topic images --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
-	bash -c 'trap "exit 0" INT; go run ./cmd/proteus/main.go'
+	bash -c 'trap "exit 0" INT; go run ./cmd/${PROJECT_NAME}/main.go'
 
 lint:
 	golangci-lint run ./...
@@ -57,7 +66,7 @@ minio:
 	docker compose exec minio sh
 
 postgres:
-	docker compose exec postgres psql -U ${DB_USER} -d proteus-db
+	docker compose exec postgres psql -U ${DB_USER} -d ${PROJECT_NAME}-db
 
 app_logs:
 	docker compose logs --tail 10 app
@@ -79,6 +88,8 @@ help:
 	@echo "| up             | Start all services (postgres, app, minio, kafka) in background    |"
 	@echo "| down           | Stop and remove all containers, networks, and temporary files     |"
 	@echo "| reset          | Remove postgres and minio Docker volumes                          |"
+	@echo "| migrate-up     | Apply database migrations                                         |"
+	@echo "| migrate-down   | Rollback last database migration                                  |"
 	@echo "| local          | Start local dev environment (go 1.25.1 required)                  |"
 	@echo "| lint           | Run golangci-lint                                                 |"
 	@echo "| test           | Run unit and integration tests                                    |"
