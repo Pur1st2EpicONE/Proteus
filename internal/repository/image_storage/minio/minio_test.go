@@ -21,18 +21,32 @@ var testBucket string
 
 func TestMain(m *testing.M) {
 
-	if err := wbf.New().LoadEnvFiles("../../../../.env"); err != nil {
+	c := wbf.New()
+
+	if err := c.LoadEnvFiles("../../../../.env"); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	if err := c.LoadConfigFiles("../../../../config.yaml"); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	var conf config.Config
+
+	if err := c.Unmarshal(&conf); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
 	cfg := config.ImageStorage{
-		MinIOEndpoint:  "minio-test:9000",
+		MinIOEndpoint:  conf.Repository.ImageStorage.MinIOEndpoint,
 		MinIOAccessKey: os.Getenv("MINIO_ROOT_USER"),
 		MinIOSecretKey: os.Getenv("MINIO_ROOT_PASSWORD"),
-		MinIOUseSSL:    false,
-		MinIORegion:    "us-east-1",
-		MinIOBucket:    "proteus-test-bucket",
+		MinIOUseSSL:    conf.Repository.ImageStorage.MinIOUseSSL,
+		MinIORegion:    conf.Repository.ImageStorage.MinIORegion,
+		MinIOBucket:    conf.Repository.ImageStorage.MinIOBucket,
 	}
 
 	logger, _ := logger.NewLogger(config.Logger{Debug: true})

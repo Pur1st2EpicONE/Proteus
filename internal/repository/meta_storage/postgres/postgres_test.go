@@ -24,24 +24,34 @@ var testStorage *postgres.MetaStorage
 
 func TestMain(m *testing.M) {
 
-	if err := wbf.New().LoadEnvFiles("../../../../.env"); err != nil {
+	c := wbf.New()
+
+	if err := c.LoadEnvFiles("../../../../.env"); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	if err := c.LoadConfigFiles("../../../../config.yaml"); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	var conf config.Config
+
+	if err := c.Unmarshal(&conf); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
 	cfg := config.MetaStorage{
-		Host:     "postgres-test",
-		Port:     "5432",
-		Username: os.Getenv("DB_USER"),
-		Password: os.Getenv("DB_PASSWORD"),
-		DBName:   "proteus_test",
-		SSLMode:  "disable",
-		QueryRetryStrategy: config.RetryStrategy{
-			Attempts: 3,
-			Delay:    100 * time.Millisecond,
-			Backoff:  1.5,
-		},
-		PendingTimeout: 24 * time.Hour,
+		Host:               conf.Repository.MetaStorage.Host,
+		Port:               conf.Repository.MetaStorage.Port,
+		Username:           os.Getenv("DB_USER"),
+		Password:           os.Getenv("DB_PASSWORD"),
+		DBName:             conf.Repository.MetaStorage.DBName,
+		SSLMode:            conf.Repository.MetaStorage.SSLMode,
+		QueryRetryStrategy: conf.Repository.MetaStorage.QueryRetryStrategy,
+		PendingTimeout:     conf.Repository.MetaStorage.PendingTimeout,
 	}
 
 	logger, _ := logger.NewLogger(config.Logger{Debug: true})

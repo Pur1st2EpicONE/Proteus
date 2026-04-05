@@ -3,7 +3,7 @@ docker: true                                   # Indicates containerized run; ge
 
 # Logger configuration
 logger:
-  log_directory: ./logs                        # Directory for logs, must be mounted via docker-compose volume; if empty, logs are written to stdout
+  log_directory:                               # Directory for logs, must be mounted via docker-compose volume; if empty, logs are written to stdout
   debug_mode: true                             # Enable debug-level logging
 
 # HTTP server configuration
@@ -14,18 +14,24 @@ server:
   max_header_bytes: 1048576                    # Maximum size of request headers in bytes
   shutdown_timeout: 10s                        # Timeout for graceful server shutdown
 
-# Database (PostgreSQL) configuration
-database:
-  goose_dialect: "postgres"                    # Dialect used by goose migrations
-  goose_migrations_directory: "./migrations"   # Directory containing migration files
-  host: postgres-test                          # Database host
-  port: "5432"                                 # Database port; must match the exposed port in docker-compose.full.yaml
-  dbname: proteus_test                          # Database name
-  sslmode: disable                             # SSL mode for database connection
-  max_open_conns: 20                           # Maximum number of open database connections
-  max_idle_conns: 10                           # Maximum number of idle connections
-  conn_max_lifetime: 30m                       # Maximum lifetime of a database connection
-  query_retry_strategy:
-    attempts: 1                                # Number of retry attempts for failed DB queries
-    delay: 200ms                               # Initial delay between retries
-    backoff: 2                                 # Backoff multiplier for retry delay
+repository:
+  meta_storage:
+    goose_dialect: "postgres"                           # Dialect used by goose migrations
+    goose_migrations_directory: "./migrations"          # Directory containing migration files
+    host: postgres-test                                 # Database host
+    port: "5432"                                        # Database port
+    dbname: proteus_test                                # Database name
+    sslmode: disable                                    # SSL mode for database connection
+    max_open_conns: 20                                  # Maximum number of open database connections
+    max_idle_conns: 10                                  # Maximum number of idle connections
+    conn_max_lifetime: 30m                              # Maximum lifetime of a database connection
+    pending_timeout: 1m
+    query_retry_strategy:
+      attempts: 1                                       # Number of retry attempts for failed DB queries
+      delay: 200ms                                      # Initial delay between retries
+      backoff: 2                                        # Backoff multiplier for retry delay
+  image_storage:
+    minio_endpoint: minio-test:9000
+    minio_bucket: proteus-test-bucket
+    minio_use_ssl: false
+    minio_region: us-east-1

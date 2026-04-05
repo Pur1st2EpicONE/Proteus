@@ -205,7 +205,7 @@
         .writeText(id)
         .then(() => {
           const original = copyIdBtn.textContent;
-          copyIdBtn.textContent = "🔲";
+          copyIdBtn.textContent = "o";
           copyIdBtn.style.color = "#10b981";
           setTimeout(() => {
             copyIdBtn.textContent = original;
