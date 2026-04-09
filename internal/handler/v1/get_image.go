@@ -8,6 +8,10 @@ import (
 	"github.com/wb-go/wbf/helpers"
 )
 
+// GetImage handles GET /api/v1/image/:id requests.
+// It validates the UUID, retrieves image metadata via the service,
+// and either returns the processed image binary or an appropriate
+// status code (202 for pending, 404 for not found, etc.).
 func (h *Handler) GetImage(c *ginext.Context) {
 
 	id := c.Param("id")

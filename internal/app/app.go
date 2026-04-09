@@ -1,3 +1,7 @@
+// Package app wires application components for the Proteus image processing service,
+// provides lifecycle management for the HTTP server, Kafka consumer/producer,
+// dual storages (meta DB and MinIO) and exposes the entry point for booting
+// and running the service with graceful shutdown.
 package app
 
 import (
@@ -22,17 +26,20 @@ import (
 )
 
 type App struct {
-	logger       logger.Logger
-	logFile      *os.File
-	server       server.Server
-	consumer     broker.Consumer
-	producer     broker.Producer
-	ctx          context.Context
-	service      service.Service
-	metaStorage  meta_storage.MetaStorage
-	imageStorage image_storage.ImageStorage
+	logger       logger.Logger              // logger is the structured logger used across all application layers.
+	logFile      *os.File                   // logFile is the file handle where logs are written (nil or os.Stdout if logging to console).
+	server       server.Server              // server is the HTTP server instance handling incoming requests.
+	consumer     broker.Consumer            // consumer is the Kafka consumer responsible for image processing tasks.
+	producer     broker.Producer            // producer is the Kafka producer used to publish new image tasks.
+	ctx          context.Context            // ctx is the root context used to coordinate graceful shutdown across components.
+	service      service.Service            // service is the business-logic layer that orchestrates image processing.
+	metaStorage  meta_storage.MetaStorage   // metaStorage is the PostgreSQL-backed repository for image metadata.
+	imageStorage image_storage.ImageStorage // imageStorage is the MinIO-backed repository for raw and processed images.
 }
 
+// Boot loads configuration, initializes logger, bootstraps both meta and image
+// repositories (PostgreSQL + migrations and MinIO + bucket) and wires all
+// components. It returns a fully constructed *App ready to run.
 func Boot() *App {
 
 	config, err := config.Load()
@@ -51,6 +58,9 @@ func Boot() *App {
 
 }
 
+// wireApp constructs application components (meta storage, image storage,
+// service, server, Kafka producer and consumer), creates a cancellable context
+// and returns the assembled *App.
 func wireApp(metaDb *dbpg.DB, imageDb *minio.Client, logger logger.Logger, logFile *os.File, config config.Config) *App {
 
 	ctx, cancel := newContext(logger)
@@ -81,6 +91,9 @@ func wireApp(metaDb *dbpg.DB, imageDb *minio.Client, logger logger.Logger, logFi
 
 }
 
+// newContext creates a context that is cancelled when the process
+// receives SIGINT or SIGTERM. It also logs receipt of the signal
+// and initiates graceful shutdown by calling the cancel function.
 func newContext(logger logger.Logger) (context.Context, context.CancelFunc) {
 
 	sigCh := make(chan os.Signal, 1)
@@ -89,7 +102,11 @@ func newContext(logger logger.Logger) (context.Context, context.CancelFunc) {
 
 	go func() {
 		sig := <-sigCh
-		logger.LogInfo("app — received signal "+sig.String()+", initiating graceful shutdown", "layer", "app")
+		sigString := sig.String()
+		if sig == syscall.SIGTERM {
+			sigString = "terminate" // sig.String() returns the SIGTERM string in past tense for some reason
+		}
+		logger.LogInfo("app — received signal "+sigString+", initiating graceful shutdown", "layer", "app")
 		cancel()
 	}()
 
@@ -97,12 +114,17 @@ func newContext(logger logger.Logger) (context.Context, context.CancelFunc) {
 
 }
 
+// processFunc returns a closure that adapts the service.ProcessImage method
+// to the signature expected by the Kafka consumer.
 func processFunc(service service.Service) func(ctx context.Context, image models.ImageProcessTask) error {
 	return func(ctx context.Context, image models.ImageProcessTask) error {
 		return service.ProcessImage(ctx, image)
 	}
 }
 
+// Run starts the server, consumer and service cleaner in background goroutines
+// and blocks until the application's context is cancelled. After cancellation
+// it invokes Stop.
 func (a *App) Run() {
 
 	go a.server.Run()
@@ -115,6 +137,9 @@ func (a *App) Run() {
 
 }
 
+// Stop performs an orderly shutdown of application components: it shuts down
+// the server, closes the Kafka consumer and producer, closes both storages
+// and the log file if it is not os.Stdout. It also logs the stop event.
 func (a *App) Stop() {
 
 	a.server.Shutdown()

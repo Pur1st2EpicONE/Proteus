@@ -1,3 +1,7 @@
+// Package handler sets up the root HTTP router for the Proteus image
+// processing service using the ginext (Gin-based) library. It registers
+// global middleware, static assets, API v1 endpoints and the frontend
+// home page.
 package handler
 
 import (
@@ -12,6 +16,10 @@ import (
 
 const templatePath = "web/templates/index.html"
 
+// NewHandler creates and configures the complete HTTP handler for the
+// application. It wires recovery middleware, static file serving,
+// API v1 routes (upload, get image, delete image) and the root home
+// page handler.
 func NewHandler(config config.Server, service service.Service) http.Handler {
 
 	handler := ginext.New("")
@@ -32,6 +40,9 @@ func NewHandler(config config.Server, service service.Service) http.Handler {
 
 }
 
+// homePage returns a ginext.HandlerFunc that renders the provided
+// index.html template as the application home page. Any template
+// execution error results in a 500 JSON response.
 func homePage(t *template.Template) ginext.HandlerFunc {
 	return func(c *ginext.Context) {
 		if err := t.Execute(c.Writer, nil); err != nil {

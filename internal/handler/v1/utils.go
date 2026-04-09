@@ -9,6 +9,8 @@ import (
 	"github.com/wb-go/wbf/ginext"
 )
 
+// validateHeader performs basic validation of the uploaded file header:
+// non-empty file and supported image MIME types (jpeg, png, webp, gif).
 func (h *Handler) validateHeader(header *multipart.FileHeader) error {
 
 	if header.Size == 0 {
@@ -28,18 +30,25 @@ func (h *Handler) validateHeader(header *multipart.FileHeader) error {
 
 }
 
+// respondOK sends a 200 OK JSON response wrapped as {"result": ...}.
 func respondOK(c *ginext.Context, response any) {
 	c.JSON(http.StatusOK, ginext.H{"result": response})
 }
 
+// respondAccepted sends a 202 Accepted JSON response (used when the
+// requested image is still being processed).
 func respondAccepted(c *ginext.Context, response any) {
 	c.JSON(http.StatusAccepted, ginext.H{"result": response})
 }
 
+// respondWithData sends raw image bytes with the correct Content-Type
+// header (used for direct image downloads).
 func respondWithData(c *ginext.Context, contentType string, data []byte) {
 	c.Data(http.StatusOK, contentType, data)
 }
 
+// respondError maps any error to the appropriate HTTP status code and
+// message, then aborts the request with a JSON error body.
 func respondError(c *ginext.Context, err error) {
 	if err != nil {
 		status, msg := mapErrorToStatus(err)
@@ -47,6 +56,8 @@ func respondError(c *ginext.Context, err error) {
 	}
 }
 
+// mapErrorToStatus translates domain and standard library errors into
+// the corresponding HTTP status code and user-facing message.
 func mapErrorToStatus(err error) (int, string) {
 
 	switch {
@@ -80,6 +91,8 @@ func mapErrorToStatus(err error) (int, string) {
 
 }
 
+// rbTooLarge reports whether the error is caused by exceeding the
+// configured maximum request body size.
 func rbTooLarge(err error) bool {
 	var maxErr *http.MaxBytesError
 	return errors.As(err, &maxErr)

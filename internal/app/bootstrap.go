@@ -16,6 +16,9 @@ import (
 
 const startupTimeout = 10 * time.Second
 
+// bootstrapRepository initializes both the meta database (PostgreSQL with Goose
+// migrations) and the image storage (MinIO with bucket creation). It returns
+// the corresponding DB connections or an error if any step fails.
 func bootstrapRepository(logger logger.Logger, config config.Repository) (*dbpg.DB, *minio.Client, error) {
 
 	metaDb, err := bootstrapMetaDB(logger, config.MetaStorage)
@@ -33,6 +36,8 @@ func bootstrapRepository(logger logger.Logger, config config.Repository) (*dbpg.
 
 }
 
+// bootstrapMetaDB connects to the meta PostgreSQL database, applies all pending
+// Goose migrations and returns the *dbpg.DB connection or an error.
 func bootstrapMetaDB(logger logger.Logger, config config.MetaStorage) (*dbpg.DB, error) {
 
 	metaDb, err := meta_storage.ConnectDB(config)
@@ -56,6 +61,8 @@ func bootstrapMetaDB(logger logger.Logger, config config.MetaStorage) (*dbpg.DB,
 
 }
 
+// bootstrapImageDB connects to MinIO and ensures the configured bucket exists
+// (creates it if necessary). It returns the *minio.Client or an error.
 func bootstrapImageDB(logger logger.Logger, config config.ImageStorage) (*minio.Client, error) {
 
 	imageDb, err := image_storage.ConnectDB(config)
@@ -76,6 +83,8 @@ func bootstrapImageDB(logger logger.Logger, config config.ImageStorage) (*minio.
 
 }
 
+// initBucket checks whether the MinIO bucket already exists and creates it
+// if it does not. It logs the creation event on success.
 func initBucket(ctx context.Context, client *minio.Client, bucketName string, logger logger.Logger) error {
 
 	exists, err := client.BucketExists(ctx, bucketName)

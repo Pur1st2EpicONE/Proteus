@@ -8,6 +8,9 @@ import (
 	"github.com/wb-go/wbf/helpers"
 )
 
+// MarkAsDeleted handles DELETE /api/v1/image/:id requests.
+// It validates the image ID and delegates the soft-delete operation
+// to the service layer.
 func (h *Handler) MarkAsDeleted(c *ginext.Context) {
 
 	id := c.Param("id")

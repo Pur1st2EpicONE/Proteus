@@ -9,6 +9,10 @@ import (
 	"github.com/wb-go/wbf/ginext"
 )
 
+// UploadImage handles POST /api/v1/upload requests.
+// It enforces the configured request and file size limits, binds form
+// data, validates the uploaded file header, reads the file into memory
+// and passes the image to the service for asynchronous processing.
 func (h *Handler) UploadImage(c *ginext.Context) {
 
 	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, h.config.MaxRequestSize)
