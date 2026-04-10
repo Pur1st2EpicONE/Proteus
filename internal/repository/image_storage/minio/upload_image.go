@@ -9,6 +9,8 @@ import (
 	"github.com/minio/minio-go/v7"
 )
 
+// UploadImage stores the image bytes in MinIO using the object's key
+// and the original content type.
 func (s *ImageStorage) UploadImage(ctx context.Context, image *models.Image) error {
 
 	_, err := s.client.PutObject(ctx, s.bucketName, image.ObjectKey, bytes.NewReader(image.File), image.Size,

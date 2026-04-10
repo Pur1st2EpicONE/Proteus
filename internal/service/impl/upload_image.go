@@ -15,6 +15,12 @@ import (
 
 const rbTimeout = 10 * time.Second
 
+// UploadImage performs the full upload flow:
+//  1. validation
+//  2. atomic save to meta + image storage
+//  3. enqueue processing task to Kafka
+//
+// If any step fails, a rollback is triggered to keep the system consistent.
 func (s *Service) UploadImage(ctx context.Context, image *models.Image) (string, error) {
 
 	if err := validate(image); err != nil {
@@ -60,6 +66,9 @@ func (s *Service) UploadImage(ctx context.Context, image *models.Image) (string,
 
 }
 
+// initialize populates the Image struct with a new UUID, size,
+// pending status, content type and the temporary object key
+// (stored under the "unprocessed/" prefix).
 func initialize(image *models.Image) {
 	image.ID = helpers.CreateUUID()
 	image.Size = int64(len(image.File))
@@ -68,11 +77,14 @@ func initialize(image *models.Image) {
 	image.ObjectKey = prefix() + image.ID + filepath.Ext(image.FileHeader.Filename)
 }
 
+// prefix returns a daily-based folder path for unprocessed images.
 func prefix() string {
 	now := time.Now().UTC()
 	return fmt.Sprintf("unprocessed/%d/%02d/%02d/", now.Year(), int(now.Month()), now.Day())
 }
 
+// rollback decides which storage failed and triggers the appropriate
+// cleanup (image storage rollback is always performed when meta save fails).
 func (s *Service) rollback(image *models.Image, err error) {
 
 	if strings.Contains(err.Error(), "meta") {
@@ -85,6 +97,8 @@ func (s *Service) rollback(image *models.Image, err error) {
 
 }
 
+// iStorageRollback deletes an orphan image from MinIO using a short
+// timeout context. It is called during upload rollback.
 func (s *Service) iStorageRollback(image *models.Image) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), rbTimeout)

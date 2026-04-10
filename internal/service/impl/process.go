@@ -21,6 +21,13 @@ import (
 	"golang.org/x/image/math/fixed"
 )
 
+const thumbnailWidth = 150
+const thumbnailHeight = 150
+
+// ProcessImage is the core worker function called by the Kafka consumer.
+// It downloads the original image, applies the requested transformation
+// (resize, thumbnail or watermark), uploads the result to MinIO and
+// updates the meta storage status to "ready".
 func (s *Service) ProcessImage(ctx context.Context, task models.ImageProcessTask) error {
 
 	_, _, err := s.metaStorage.GetImageMeta(ctx, task.ID)
@@ -41,7 +48,7 @@ func (s *Service) ProcessImage(ctx context.Context, task models.ImageProcessTask
 	switch task.Action {
 
 	case models.Thumbnail:
-		img := imaging.Thumbnail(srcImg, 150, 150, imaging.Lanczos)
+		img := imaging.Thumbnail(srcImg, thumbnailWidth, thumbnailHeight, imaging.Lanczos)
 		buf, _ := encode(img, format)
 		file = buf
 
@@ -77,6 +84,8 @@ func (s *Service) ProcessImage(ctx context.Context, task models.ImageProcessTask
 
 }
 
+// getImage downloads the original image from MinIO and decodes it
+// into an image.Image together with its original format.
 func (s *Service) getImage(ctx context.Context, objectKey string) (image.Image, string, error) {
 
 	imageBytes, err := s.imageStorage.DownloadImage(ctx, objectKey)
@@ -93,13 +102,14 @@ func (s *Service) getImage(ctx context.Context, objectKey string) (image.Image, 
 
 }
 
+// encode re-encodes the processed image back to its original format.
 func encode(img image.Image, format string) ([]byte, error) {
 
 	var buf bytes.Buffer
 
 	switch format {
 	case "jpeg":
-		err := jpeg.Encode(&buf, img, &jpeg.Options{Quality: 85})
+		err := jpeg.Encode(&buf, img, &jpeg.Options{Quality: jpeg.DefaultQuality})
 		return buf.Bytes(), err
 	case "png":
 		err := png.Encode(&buf, img)
@@ -113,6 +123,8 @@ func encode(img image.Image, format string) ([]byte, error) {
 
 }
 
+// addWatermark overlays a semi-transparent white text box with
+// the provided watermark text in the bottom-right corner of the image.
 func addWatermark(src image.Image, watermark string) image.Image {
 
 	res := imaging.Clone(src)

@@ -6,6 +6,9 @@ import (
 	"strings"
 )
 
+// DownloadImage retrieves the processed image bytes from MinIO
+// and determines the correct Content-Type based on the file extension
+// of the object key. It is called by the GET /image/:id handler.
 func (s *Service) DownloadImage(ctx context.Context, key string) ([]byte, string, error) {
 
 	data, err := s.imageStorage.DownloadImage(ctx, key)

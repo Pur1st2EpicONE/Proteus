@@ -8,6 +8,8 @@ import (
 	"github.com/minio/minio-go/v7"
 )
 
+// DownloadImage retrieves the full object content as a byte slice.
+// The caller is responsible for handling any NotFound errors from MinIO.
 func (s *ImageStorage) DownloadImage(ctx context.Context, objectKey string) ([]byte, error) {
 
 	object, err := s.client.GetObject(ctx, s.bucketName, objectKey, minio.GetObjectOptions{})

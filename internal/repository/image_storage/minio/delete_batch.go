@@ -7,6 +7,10 @@ import (
 	"github.com/minio/minio-go/v7"
 )
 
+// DeleteBatch removes multiple objects (both the original key and
+// its "un" + key variant used for unprocessed images) in a single
+// batched operation. It collects any errors but returns only the
+// last one wrapped with a summary.
 func (s *ImageStorage) DeleteBatch(ctx context.Context, objectKeys []string) error {
 
 	if len(objectKeys) == 0 {

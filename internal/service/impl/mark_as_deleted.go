@@ -7,6 +7,8 @@ import (
 	"errors"
 )
 
+// MarkAsDeleted delegates the soft-delete operation to the meta
+// storage and maps sql.ErrNoRows to ErrImageNotFound.
 func (s *Service) MarkAsDeleted(ctx context.Context, id string) error {
 	if err := s.metaStorage.MarkAsDeleted(ctx, id); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {

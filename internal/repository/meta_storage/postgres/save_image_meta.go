@@ -9,6 +9,9 @@ import (
 	"github.com/wb-go/wbf/retry"
 )
 
+// SaveImageMeta inserts the initial metadata record for a newly
+// uploaded image (UUID, unprocessed object_key, pending status).
+// It is called as part of the atomic upload transaction in the service.
 func (m *MetaStorage) SaveImageMeta(ctx context.Context, image *models.Image) error {
 
 	_, err := m.db.QueryRowWithRetry(ctx, retry.Strategy(m.config.QueryRetryStrategy), `

@@ -8,6 +8,9 @@ import (
 	"errors"
 )
 
+// GetImageMeta retrieves image metadata from the meta storage and
+// maps "deleted" status or missing rows to ErrImageNotFound.
+// It is used by the GET /image/:id handler.
 func (s *Service) GetImageMeta(ctx context.Context, id string) (string, string, error) {
 
 	key, status, err := s.metaStorage.GetImageMeta(ctx, id)

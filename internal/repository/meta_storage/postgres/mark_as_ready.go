@@ -9,6 +9,9 @@ import (
 	"github.com/wb-go/wbf/retry"
 )
 
+// MarkAsReady updates the image status to "ready" and replaces the
+// temporary object_key (unprocessed) with the final processed object_key.
+// Called by the Kafka consumer after successful image processing.
 func (m *MetaStorage) MarkAsReady(ctx context.Context, objectKey string, uuid string) error {
 
 	result, err := m.db.ExecWithRetry(ctx, retry.Strategy(m.config.QueryRetryStrategy), `

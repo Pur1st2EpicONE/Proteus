@@ -11,6 +11,9 @@ import (
 	"github.com/wb-go/wbf/retry"
 )
 
+// MarkAsDeleted performs a soft-delete by updating the image status
+// to "deleted". It uses a FOR UPDATE lock to prevent race conditions
+// with concurrent processing.
 func (m *MetaStorage) MarkAsDeleted(ctx context.Context, id string) error {
 
 	tx, err := m.db.BeginTxWithRetry(ctx, retry.Strategy(m.config.QueryRetryStrategy), nil)

@@ -13,6 +13,11 @@ import (
 	_ "golang.org/x/image/webp"
 )
 
+const minImageDimension = 1     // minImageDimension is the smallest allowed width or height of an image.
+const maxImageDimension = 12000 // maxImageDimension is the largest allowed width or height of an image
+
+// validate runs all business validation rules for an uploaded image:
+// request actions and file content/dimensions.
 func validate(image *models.Image) error {
 	if err := validateRequest(image.Request); err != nil {
 		return err
@@ -20,6 +25,8 @@ func validate(image *models.Image) error {
 	return validateFile(image.File)
 }
 
+// validateRequest checks that at least one supported action is provided
+// and validates action-specific parameters (watermark text, resize dimensions).
 func validateRequest(request models.Request) error {
 
 	if err := validateAction(request.Action); err != nil {
@@ -41,6 +48,8 @@ func validateRequest(request models.Request) error {
 
 var allowedActions = map[string]struct{}{models.Thumbnail: {}, models.Resize: {}, models.Watermark: {}}
 
+// validateAction ensures the action string is non-empty and is one of
+// the supported actions (thumbnail, resize, watermark).
 func validateAction(action string) error {
 
 	if strings.TrimSpace(action) == "" {
@@ -55,6 +64,7 @@ func validateAction(action string) error {
 
 }
 
+// validateWatermark requires non-empty text when the watermark action is used.
 func validateWatermark(watermark string) error {
 	if strings.TrimSpace(watermark) == "" {
 		return errs.ErrWatermarkTextRequired
@@ -62,6 +72,8 @@ func validateWatermark(watermark string) error {
 	return nil
 }
 
+// validateResize ensures that at least one dimension is positive and
+// neither is negative.
 func validateResize(width int, height int) error {
 
 	if width == 0 && height == 0 {
@@ -76,6 +88,8 @@ func validateResize(width int, height int) error {
 
 }
 
+// validateFile decodes the image header to verify supported format
+// and valid dimensions (1..12000 px).
 func validateFile(file []byte) error {
 
 	reader := bytes.NewReader(file)
@@ -95,13 +109,15 @@ func validateFile(file []byte) error {
 
 }
 
+// validateDimensions checks that image width and height are at least
+// minImageDimension and do not exceed maxImageDimension.
 func validateDimensions(config image.Config) error {
 
-	if config.Width < 1 || config.Height < 1 {
+	if config.Width < minImageDimension || config.Height < minImageDimension {
 		return errs.ErrInvalidImageDimensions
 	}
 
-	if config.Width > 12000 || config.Height > 12000 {
+	if config.Width > maxImageDimension || config.Height > maxImageDimension {
 		return errs.ErrImageTooLargeDimensions
 	}
 
