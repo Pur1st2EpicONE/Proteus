@@ -35,6 +35,15 @@
   let currentId = null;
   let pollTimer = null;
 
+  function getExtensionFromMime(mimeType) {
+    const type = (mimeType || "").toLowerCase();
+    if (type.includes("png")) return "png";
+    if (type.includes("jpeg") || type.includes("jpg")) return "jpg";
+    if (type.includes("webp")) return "webp";
+    if (type.includes("gif")) return "gif";
+    return "jpg";
+  }
+
   function resetUi() {
     statusBlock.hidden = true;
     previewBlock.hidden = true;
@@ -134,11 +143,14 @@
         if (res.status === 200) {
           const blob = await res.blob();
           const url = URL.createObjectURL(blob);
+          const extension = getExtensionFromMime(blob.type);
+          const filename = `${id}.${extension}`;
+
           resultImage.src = url;
           previewBlock.hidden = false;
           imageIdNode.textContent = id;
           currentId = id;
-          setupPreviewControls(id, url);
+          setupPreviewControls(id, url, filename);
 
           statusBlock.hidden = true;
           clearInterval(pollTimer);
@@ -171,11 +183,11 @@
     }, interval);
   }
 
-  function setupPreviewControls(id, blobUrl) {
+  function setupPreviewControls(id, blobUrl, downloadFilename) {
     downloadBtn.onclick = () => {
       const a = document.createElement("a");
       a.href = blobUrl;
-      a.download = `${id}.jpg`;
+      a.download = downloadFilename;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -241,11 +253,14 @@
       if (res.status === 200) {
         const blob = await res.blob();
         const url = URL.createObjectURL(blob);
+        const extension = getExtensionFromMime(blob.type);
+        const filename = `${id}.${extension}`;
+
         resultImage.src = url;
         previewBlock.hidden = false;
         imageIdNode.textContent = id;
         currentId = id;
-        setupPreviewControls(id, url);
+        setupPreviewControls(id, url, filename);
 
         statusBlock.hidden = true;
         return;

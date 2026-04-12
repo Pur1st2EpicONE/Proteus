@@ -44,27 +44,24 @@ func (s *Service) ProcessImage(ctx context.Context, task models.ImageProcessTask
 	}
 
 	var file []byte
+	var img image.Image
 
 	switch task.Action {
-
 	case models.Thumbnail:
-		img := imaging.Thumbnail(srcImg, thumbnailWidth, thumbnailHeight, imaging.Lanczos)
-		buf, _ := encode(img, format)
-		file = buf
-
+		img = imaging.Thumbnail(srcImg, thumbnailWidth, thumbnailHeight, imaging.Lanczos)
 	case models.Watermark:
-		img := addWatermark(srcImg, task.Watermark)
-		buf, _ := encode(img, format)
-		file = buf
-
+		img = addWatermark(srcImg, task.Watermark)
 	case models.Resize:
-		img := imaging.Resize(srcImg, task.Width, task.Height, imaging.Lanczos)
-		buf, _ := encode(img, format)
-		file = buf
-
+		img = imaging.Resize(srcImg, task.Width, task.Height, imaging.Lanczos)
 	default:
 		return errs.ErrUnsupportedAction
 	}
+
+	buf, err := encode(img, format)
+	if err != nil {
+		return fmt.Errorf("failed to encode image: %w", err)
+	}
+	file = buf
 
 	err = s.imageStorage.UploadImage(ctx, &models.Image{
 		ObjectKey:   task.ObjectKey[2:],
@@ -111,7 +108,7 @@ func encode(img image.Image, format string) ([]byte, error) {
 	case "jpeg":
 		err := jpeg.Encode(&buf, img, &jpeg.Options{Quality: jpeg.DefaultQuality})
 		return buf.Bytes(), err
-	case "png":
+	case "png", "webp":
 		err := png.Encode(&buf, img)
 		return buf.Bytes(), err
 	case "gif":

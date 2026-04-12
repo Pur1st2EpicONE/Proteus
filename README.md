@@ -3,7 +3,7 @@
 
 ##
 
-
+![example gif](assets/example.gif)
 
 <br>
 
@@ -28,8 +28,8 @@
 - **App** — the central orchestrator of the system.  
   Responsible for application bootstrap and lifecycle management. It loads configuration, bootstraps both storages (PostgreSQL with Goose migrations + MinIO with bucket creation), wires all components (service, server, Kafka producer/consumer, meta & image storage) and manages graceful shutdown via a shared context.
 
-- **Broker** — the messaging layer built on Kafka.  
-  Publishes image processing tasks after successful upload and consumes them asynchronously. Uses a single topic with consumer groups. The producer and consumer are wrapped with logging, retries and graceful shutdown support.
+- **Handler** — HTTP layer.  
+  Exposes REST API under /api/v1, serves a simple web UI at root and enforces request/file size limits.
 
 - **Service** — the core business logic layer.  
   Validates uploads, performs atomic save to both storages, enqueues tasks to Kafka, processes images, handles rollbacks on failure, serves images and performs soft-delete + background cleanup.
@@ -40,12 +40,10 @@
 - **ImageStorage** — MinIO-backed object storage.  
   Persists original and processed images. Supports upload, download, single delete and batch delete (including temporary "unprocessed" variants).
 
-- **Handler** — HTTP layer (Gin-based).  
-  Exposes REST API under /api/v1, serves a simple web UI at root and enforces request/file size limits.
+- **Broker** — the messaging layer built on Kafka.  
+  Publishes image processing tasks after successful upload and consumes them asynchronously. Uses a single topic with consumer groups. The producer and consumer are wrapped with logging, retries and graceful shutdown support.
 
-- **Cleaner** — background maintenance goroutine.  
-  Periodically removes soft-deleted and stale pending images from both storages using batch operations.
-
+![proteus diagram](assets/diagram.png)
 
 <br>
 
