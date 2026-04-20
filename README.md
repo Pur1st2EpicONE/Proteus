@@ -209,8 +209,8 @@ All operations are idempotent and safe to retry.
 ## Batch deletion & cleanup
 
 - Soft delete (DELETE /image/:id) only changes status to deleted
-- Background Cleaner goroutine runs every **[cleanup_interval](https://github.com/Pur1st2EpicONE/Proteus/blob/68e926e6b64cbb7d2720acdf1a39c25ae07d921b/configs/config.full.yaml#L21)**
-- It selects images where status = deleted or status = pending longer than **[pending_timeout](https://github.com/Pur1st2EpicONE/Proteus/blob/68e926e6b64cbb7d2720acdf1a39c25ae07d921b/configs/config.full.yaml#L34)**
+- Background Cleaner goroutine runs every **[cleanup_interval](https://github.com/Pur1st2EpicONE/Proteus/blob/fbf4717db850d3012d6583fec7c501c661774e0f/configs/config.full.yaml#L22)**
+- It selects images where status = deleted or status = pending longer than **[pending_timeout](https://github.com/Pur1st2EpicONE/Proteus/blob/fbf4717db850d3012d6583fec7c501c661774e0f/configs/config.full.yaml#L36)**
 
 - Performs batch delete:
   1. imageStorage.DeleteBatch() — removes both original and processed variants from MinIO
